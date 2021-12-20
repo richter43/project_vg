@@ -164,6 +164,7 @@ class TripletsDataset(BaseDataset):
             for images, indexes in tqdm(subset_dl, ncols=100):
                 images = images.to(args.device)
                 features = model(images)
+            
                 cache[indexes.numpy()] = features.cpu().numpy()
         return cache
     
