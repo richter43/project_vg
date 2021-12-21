@@ -37,11 +37,6 @@ def parse_arguments():
     parser.add_argument("--exp_name", type=str, default="default",
                         help="Folder name of the current run (saved in ./runs/)")
     
-    # Layer to be used and related parameters
-    parser.add_argument("--layer", type =str, default = "avg", help = "Pooling layer used. Can be 'avg','net' and 'gem' ")
-    parser.add_argument("--num_clusters", type =int, default = 64, help = "Number of clusters used in the NetVLAD layer")
-
-
     args = parser.parse_args()
     
     if args.queries_per_epoch % args.cache_refresh_rate != 0:
