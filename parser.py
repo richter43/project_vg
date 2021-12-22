@@ -40,7 +40,7 @@ def parse_arguments():
     # Layer to be used and related parameters
     parser.add_argument("--layer", type =str, default = "avg", help = "Pooling layer used. Can be 'avg','net' and 'gem' ")
     parser.add_argument("--num_clusters", type =int, default = 64, help = "Number of clusters used in the NetVLAD layer")
-
+    parser.add_argument("--load_from", type = str, default = "", help = "folder of the model to be loaded. Resumes training from checkpoint")
 
     args = parser.parse_args()
     

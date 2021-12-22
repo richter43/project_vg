@@ -7,6 +7,7 @@ from tqdm import tqdm
 import torch.nn as nn
 import multiprocessing
 from os.path import join
+from os.path import isdir
 from datetime import datetime
 from torch.utils.data.dataloader import DataLoader
 torch.backends.cudnn.benchmark= True  # Provides a speedup
@@ -21,8 +22,14 @@ import datasets_ws
 #### Initial setup: parser, logging...
 args = parser.parse_arguments()
 start_time = datetime.now()
-args.output_folder = join("runs", args.exp_name, start_time.strftime('%Y-%m-%d_%H-%M-%S'))
-commons.setup_logging(args.output_folder)
+if args.load_from == "":
+    args.output_folder = join("runs", args.exp_name, start_time.strftime('%Y-%m-%d_%H-%M-%S'))
+else:
+    assert isdir(args.load_from)
+    logging.info(f"Resuming training starting from checkpoint in {args.load_from}")
+    args.output_folder = args.load_from
+if args.load_from:
+    commons.setup_logging(args.output_folder)
 commons.make_deterministic(args.seed)
 logging.info(f"Arguments: {args}")
 logging.info(f"The outputs are being saved in {args.output_folder}")
@@ -42,7 +49,7 @@ logging.info(f"Test set: {test_ds}")
 
 #### Initialize model
 model = network.GeoLocalizationNet(args)
-model = model.to(args.device)
+
 
 #### Setup Optimizer and Loss
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -50,11 +57,26 @@ criterion_triplet = nn.TripletMarginLoss(margin=args.margin, p=2, reduction="sum
 
 best_r5 = 0
 not_improved_num = 0
+starting_epoch = 0
 
+#### Loading model
+if args.load_from != "":
+    checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    starting_epoch = checkpoint['epoch_num'] + 1 
+    #loss = checkpoint['loss']
+    best_r5 = checkpoint['best_r5']
+    not_improved_num = checkpoint['not_improved_num']
+
+
+
+
+model = model.to(args.device)
 logging.info(f"Output dimension of the model is {args.features_dim}")
 
 #### Training loop
-for epoch_num in range(args.epochs_num):
+for epoch_num in range(starting_epoch, args.epochs_num):
     logging.info(f"Start training epoch: {epoch_num:02d}")
     
     epoch_start_time = datetime.now()
