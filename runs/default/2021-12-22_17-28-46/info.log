@@ -1,0 +1,23 @@
+2021-12-22 17:28:46   Arguments: Namespace(cache_refresh_rate=1000, datasets_folder='../datasets', device='cuda', epochs_num=50, exp_name='default', infer_batch_size=16, layer='avg', lr=1e-05, margin=0.1, neg_samples_num=1000, negs_num_per_query=10, num_clusters=64, num_workers=8, output_folder='runs/default/2021-12-22_17-28-46', patience=3, queries_per_epoch=5000, recall_values=[1, 5, 10, 20], seed=0, train_batch_size=4, train_positives_dist_threshold=10, val_positive_dist_threshold=25)
+2021-12-22 17:28:46   The outputs are being saved in runs/default/2021-12-22_17-28-46
+2021-12-22 17:28:46   Using 1 GPUs and 2 CPUs
+2021-12-22 17:28:46   There are 96 queries without any positives within the training set. They won't be considered as they're useless for training.
+2021-12-22 17:28:46   Train query set: < TripletsDataset, pitts30k - #database: 10000; #queries: 7320 >
+2021-12-22 17:28:46   Val set: < BaseDataset, pitts30k - #database: 10000; #queries: 7608 >
+2021-12-22 17:28:47   Test set: < BaseDataset, pitts30k - #database: 10000; #queries: 6816 >
+2021-12-22 17:28:52   Output dimension of the model is 256
+2021-12-22 17:28:52   Start training epoch: 00
+2021-12-22 18:09:25   Finished epoch 00 in 0:40:33, average epoch triplet loss = 0.0712
+2021-12-22 18:14:28   Recalls on val set < BaseDataset, pitts30k - #database: 10000; #queries: 7608 >: R@1: 57.0, R@5: 77.4, R@10: 84.6, R@20: 89.9
+2021-12-22 18:14:29   Improved: previous best R@5 = 0.0, current R@5 = 77.4
+2021-12-22 18:14:29   Start training epoch: 01
+2021-12-22 18:14:55   
+Traceback (most recent call last):
+  File "train.py", line 70, in <module>
+    triplets_ds.compute_triplets(args, model)
+  File "/content/project_vg/datasets_ws.py", line 207, in compute_triplets
+    cache = self.compute_cache(args, model, subset_ds, (len(self), args.features_dim))
+  File "/content/project_vg/datasets_ws.py", line 168, in compute_cache
+    cache[indexes.numpy()] = features.cpu().numpy()
+KeyboardInterrupt
+
