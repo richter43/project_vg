@@ -46,10 +46,13 @@ logging.info(f"Val set: {val_ds}")
 
 test_ds = datasets_ws.BaseDataset(args, args.datasets_folder, "pitts30k", "test")
 logging.info(f"Test set: {test_ds}")
-
+checkpoint = []
 #### Initialize model
 model = network.GeoLocalizationNet(args)
-
+if args.load_from != "":
+    checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
+    model.load_state_dict(checkpoint['model_state_dict'])
+model = model.to(args.device)
 
 #### Setup Optimizer and Loss
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -61,8 +64,6 @@ starting_epoch = 0
 
 #### Loading model
 if args.load_from != "":
-    checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
-    model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     starting_epoch = checkpoint['epoch_num'] + 1 
     #loss = checkpoint['loss']
@@ -71,13 +72,14 @@ if args.load_from != "":
 
 
 
-
-model = model.to(args.device)
 logging.info(f"Output dimension of the model is {args.features_dim}")
 
 #### Training loop
-for epoch_num in range(starting_epoch, args.epochs_num):
-    logging.info(f"Start training epoch: {epoch_num:02d}")
+for epoch_num in range(args.epochs_num):
+    #skipping epochs when resuming: we still need to iterate through the dataloader, otherwise when resuming
+    #we will train with the same data we used during the very first training session
+    if epoch_num>=starting_epoch:
+        logging.info(f"Start training epoch: {epoch_num:02d}")
     
     epoch_start_time = datetime.now()
     epoch_losses = np.zeros((0,1), dtype=np.float32)
@@ -99,11 +101,12 @@ for epoch_num in range(starting_epoch, args.epochs_num):
                                  drop_last=True)
         
         model = model.train()
-        
+        if epoch_num < starting_epoch:
+            #when True we're just iterating through dataloader, no need to do anything further and/or train model
+            continue
         # images shape: (train_batch_size*12)*3*H*W ; by default train_batch_size=4, H=480, W=640
         # triplets_local_indexes shape: (train_batch_size*10)*3 ; because 10 triplets per query
         for images, triplets_local_indexes, _ in tqdm(triplets_dl, ncols=100):
-            
             # Compute features of all images (images contains queries, positives and negatives)
             features = model(images.to(args.device))
             loss_triplet = 0
@@ -127,12 +130,15 @@ for epoch_num in range(starting_epoch, args.epochs_num):
             epoch_losses = np.append(epoch_losses, batch_loss)
             del loss_triplet
         
+        
         logging.debug(f"Epoch[{epoch_num:02d}]({loop_num}/{loops_num}): " +
-                      f"current batch triplet loss = {batch_loss:.4f}, " +
-                      f"average epoch triplet loss = {epoch_losses.mean():.4f}")
-    
+                        f"current batch triplet loss = {batch_loss:.4f}, " +
+                        f"average epoch triplet loss = {epoch_losses.mean():.4f}")
+    if epoch_num < starting_epoch:
+        #we're iterating through dataloader, no need to compute recalls (most likely they're in the log files for the given epoch_num)
+        continue
     logging.info(f"Finished epoch {epoch_num:02d} in {str(datetime.now() - epoch_start_time)[:-7]}, "
-                 f"average epoch triplet loss = {epoch_losses.mean():.4f}")
+                f"average epoch triplet loss = {epoch_losses.mean():.4f}")
     
     # Compute recalls on validation set
     recalls, recalls_str = test.test(args, val_ds, model)

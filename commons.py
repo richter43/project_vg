@@ -41,8 +41,9 @@ def setup_logging(output_folder, console="debug",
         debug_filename (str): the name of the debug file. if None, don't create debug file
     """
     if os.path.exists(output_folder):
-        raise FileExistsError(f"{output_folder} already exists!")
-    os.makedirs(output_folder, exist_ok=True)
+        print("log folder already exists")#raise FileExistsError(f"{output_folder} already exists!")
+    else: 
+        os.makedirs(output_folder, exist_ok=True)
     # logging.Logger.manager.loggerDict.keys() to check which loggers are in use
     base_formatter = logging.Formatter('%(asctime)s   %(message)s', "%Y-%m-%d %H:%M:%S")
     logger = logging.getLogger('')
