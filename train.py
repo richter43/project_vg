@@ -105,8 +105,10 @@ for epoch_num in range(args.epochs_num):
 
             # Compute features of all images (images contains queries, positives and negatives)
             features = model(images.to(args.device))
+            # This is implicitly casted to a tensor afterwards
             loss_triplet = 0
 
+            # View
             triplets_local_indexes = torch.transpose(
                 triplets_local_indexes.view(args.train_batch_size, args.negs_num_per_query, 3), 1, 0)
             for triplets in triplets_local_indexes:

@@ -22,6 +22,9 @@ from argparse import Namespace
 from typing import Type, Tuple
 DatasetFullLength = int
 FinalConvLayerSize = int
+TripletImages = torch.Tensor
+TripletLocalIndexes = torch.Tensor
+TripletGlobalIndexes = torch.Tensor
 
 # %% Code
 base_transform = transforms.Compose([
@@ -94,6 +97,7 @@ class BaseDataset(data.Dataset):
         # Find soft_positives_per_query, which are within val_positive_dist_threshold (default 25 meters)
         knn = NearestNeighbors(n_jobs=-1)
         knn.fit(self.database_utms)
+        # Array of elements' indices close up to args.val_positive_dist_threshold given a query
         self.soft_positives_per_query = knn.radius_neighbors(self.queries_utms,
                                                              radius=args.val_positive_dist_threshold,
                                                              return_distance=False)
@@ -163,17 +167,22 @@ class TripletsDataset(BaseDataset):
             list(self.queries_paths)
         self.queries_num = len(self.queries_paths)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> Tuple[TripletImages, TripletLocalIndexes, TripletGlobalIndexes]:
 
         if self.is_inference:
             # At inference time return the single image. This is used for caching
             return super().__getitem__(index)
 
-        # triplets_global_indexes is obtained after calling the compute_triplets method externally
+        # triplets_global_indexes is obtained after externally calling the compute_triplets method
+        # Extraction of useful values
 
         query_index, best_positive_index, neg_indexes = torch.split(
             self.triplets_global_indexes[index],
             (1, 1, self.negs_num_per_query))
+
+        # The following commands take the indexes of the respective image,
+        # reads from disk, transforms to tensor and normalizes according to Imagenet
+        # parameters
 
         query = base_transform(path_to_pil_img(
             self.queries_paths[query_index]))
@@ -184,8 +193,14 @@ class TripletsDataset(BaseDataset):
         negatives = [base_transform(path_to_pil_img(
             self.database_paths[i])) for i in neg_indexes]
 
+        # Stacking actual images' data into a tensor
         images = torch.stack((query, positive, *negatives), 0)
         triplets_local_indexes = torch.empty((0, 3), dtype=torch.int)
+
+        # Creation of a local index list
+        # A local index is just a list of tuples that contain the indexes of the images
+        # relative to the given set of images (for instance, given a single set of triplet images
+        # the indexes are query_image=0 pos_image->1 neg_image->[2,11])
         for neg_num in range(len(neg_indexes)):
             triplets_local_indexes = torch.cat(
                 (triplets_local_indexes, torch.tensor([0, 1, 2+neg_num]).reshape(1, 3)))
@@ -212,11 +227,11 @@ class TripletsDataset(BaseDataset):
             for images, indexes in tqdm(subset_dl, ncols=100):
                 images = images.to(args.device)
                 features = model(images)
-            
+
                 cache[indexes.numpy()] = features.cpu().numpy()
         return cache
 
-    def get_query_features(self, query_index, cache):
+    def get_query_features(self, query_index: int, cache: np.ndarray) -> np.ndarray:
         query_features = cache[query_index + self.database_num]
         if query_features is None:
             raise RuntimeError(f"For query {self.queries_paths[query_index]} " +
@@ -245,11 +260,12 @@ class TripletsDataset(BaseDataset):
         neg_nums = neg_nums.reshape(-1)
         neg_indexes = neg_samples[neg_nums].astype(np.int32)
         return neg_indexes
-    # Note: this is called externally, why?
 
     def compute_triplets(self, args: Namespace, model: Type[nn.Module]) -> None:
         """
-        Creates the triplets_global_indexes list for the current dataset.
+        Creates the triplets_global_indexes tensor for the current dataset, which is a 
+        list of tuples containing the index of a given query with its best positive samples' indexes
+        and a list of negative samples' indexes. (query_index, best_positive_index, *neg_indexes)
         Also computes the cache of all features for accelerating their access.
 
         Parameters
@@ -271,6 +287,7 @@ class TripletsDataset(BaseDataset):
         #  Compute features for all images and store them in cache
         subset_ds = Subset(self, database_indexes +
                            list(sampled_queries_indexes + self.database_num))
+
         cache = self.compute_cache(
             args, model, subset_ds, (len(self), args.features_dim))
 
@@ -284,7 +301,6 @@ class TripletsDataset(BaseDataset):
             neg_indexes = np.random.choice(
                 self.database_num, self.neg_samples_num, replace=False)
             # Remove the eventual soft_positives from neg_indexes
-            # TODO
             soft_positives = self.soft_positives_per_query[query_index]
             neg_indexes = np.setdiff1d(
                 neg_indexes, soft_positives, assume_unique=True)

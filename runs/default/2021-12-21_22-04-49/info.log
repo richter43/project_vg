@@ -1,0 +1,15 @@
+2021-12-21 22:04:55   Arguments: Namespace(train_batch_size=4, infer_batch_size=16, margin=0.1, epochs_num=50, patience=3, lr=1e-05, cache_refresh_rate=1000, queries_per_epoch=5000, negs_num_per_query=10, neg_samples_num=1000, seed=0, device='cuda', num_workers=8, val_positive_dist_threshold=25, train_positives_dist_threshold=10, recall_values=[1, 5, 10, 20], datasets_folder='~/Datasets', exp_name='default', output_folder='runs/default/2021-12-21_22-04-49')
+2021-12-21 22:04:58   The outputs are being saved in runs/default/2021-12-21_22-04-49
+2021-12-21 22:05:03   Using 1 GPUs and 8 CPUs
+2021-12-21 22:06:51   Arguments: Namespace(train_batch_size=4, infer_batch_size=16, margin=0.1, epochs_num=50, patience=3, lr=1e-05, cache_refresh_rate=1000, queries_per_epoch=5000, negs_num_per_query=10, neg_samples_num=1000, seed=0, device='cuda', num_workers=8, val_positive_dist_threshold=25, train_positives_dist_threshold=10, recall_values=[1, 5, 10, 20], datasets_folder='/home/foxtrot/Datasets', exp_name='default', output_folder='runs/default/2021-12-21_22-06-51')
+2021-12-21 22:06:51   The outputs are being saved in runs/default/2021-12-21_22-06-51
+2021-12-21 22:06:51   Using 1 GPUs and 8 CPUs
+2021-12-21 22:06:55   There are 96 queries without any positives within the training set. They won't be considered as they're useless for training.
+2021-12-21 22:07:07   Train query set: < TripletsDataset, pitts30k - #database: 10000; #queries: 7320 >
+2021-12-21 22:07:30   Val set: < BaseDataset, pitts30k - #database: 10000; #queries: 7608 >
+2021-12-21 22:07:40   Test set: < BaseDataset, pitts30k - #database: 10000; #queries: 6816 >
+2021-12-21 22:07:58   Output dimension of the model is 256
+2021-12-21 22:08:55   Start training epoch: 00
+2021-12-21 23:11:49   Arguments: Namespace(train_batch_size=4, infer_batch_size=16, margin=0.1, epochs_num=50, patience=3, lr=1e-05, cache_refresh_rate=1000, queries_per_epoch=5000, negs_num_per_query=10, neg_samples_num=1000, seed=0, device='cuda', num_workers=8, val_positive_dist_threshold=25, train_positives_dist_threshold=10, recall_values=[1, 5, 10, 20], datasets_folder='/home/foxtrot/Datasets', exp_name='default', output_folder='runs/default/2021-12-21_23-11-49')
+2021-12-21 23:11:49   The outputs are being saved in runs/default/2021-12-21_23-11-49
+2021-12-21 23:11:49   Using 1 GPUs and 8 CPUs
