@@ -8,6 +8,7 @@ from tqdm import tqdm
 from PIL import Image
 from os.path import join
 import torch
+import time
 
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -39,7 +40,7 @@ def path_to_pil_img(path):
 
 
 def collate_fn(batch):
-    """Creates mini-batch tensors from the list of tuples (images, 
+    """Creates mini-batch tensors from the list of tuples (images,
         triplets_local_indexes, triplets_global_indexes).
         triplets_local_indexes are the indexes referring to each triplet within images.
         triplets_global_indexes are the global indexes of each image.
@@ -124,7 +125,7 @@ class BaseDataset(data.Dataset):
 
 
 class TripletsDataset(BaseDataset):
-    """Dataset used for training, it is used to compute the triplets 
+    """Dataset used for training, it is used to compute the triplets
     with TripletsDataset.compute_triplets().
     If is_inference == True, uses methods of the parent class BaseDataset,
     this is used for example when computing the cache, because it requires
@@ -263,7 +264,7 @@ class TripletsDataset(BaseDataset):
 
     def compute_triplets(self, args: Namespace, model: Type[nn.Module]) -> None:
         """
-        Creates the triplets_global_indexes tensor for the current dataset, which is a 
+        Creates the triplets_global_indexes tensor for the current dataset, which is a
         list of tuples containing the index of a given query with its best positive samples' indexes
         and a list of negative samples' indexes. (query_index, best_positive_index, *neg_indexes)
         Also computes the cache of all features for accelerating their access.
