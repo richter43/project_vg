@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch import nn
+import time
 
 import localparser as parser
 import util
@@ -119,7 +120,8 @@ for epoch_num in range(args.epochs_num):
             del features
             loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
 
-            optimizer.zero_grad()
+            # https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html#use-parameter-grad-none-instead-of-model-zero-grad-or-optimizer-zero-grad
+            optimizer.zero_grad(set_to_none=True)
             loss_triplet.backward()
             optimizer.step()
 
