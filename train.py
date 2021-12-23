@@ -10,6 +10,7 @@ from os.path import join
 from os.path import isdir
 from datetime import datetime
 from torch.utils.data.dataloader import DataLoader
+from mega import Mega
 torch.backends.cudnn.benchmark= True  # Provides a speedup
 
 import util
@@ -22,14 +23,27 @@ import datasets_ws
 #### Initial setup: parser, logging...
 args = parser.parse_arguments()
 start_time = datetime.now()
+
+if args.use_mega == "y":
+    util.init_mega(args)
+
+#### Initialize cloud
 if args.load_from == "":
     args.output_folder = join("runs", args.exp_name, start_time.strftime('%Y-%m-%d_%H-%M-%S'))
+    if args.use_mega == "y":
+        # create the folder in the cloud, it will store your model
+        args.m.create_folder(args.output_folder)
+        args.mega_folder = util.MyFind(m,args.output_folder)
 else:
-    assert isdir(args.load_from)
+    assert args.use_mega == "y"
+    args.mega_folder = util.MyFind(m, args.load_from)
+    assert args.mega_folder != None
+
     logging.info(f"Resuming training starting from checkpoint in {args.load_from}")
-    args.output_folder = args.load_from
-if args.load_from:
-    commons.setup_logging(args.output_folder)
+    args.output_folder = join("runs", args.exp_name, start_time.strftime('%Y-%m-%d_%H-%M-%S'))
+
+
+commons.setup_logging(args.output_folder)
 commons.make_deterministic(args.seed)
 logging.info(f"Arguments: {args}")
 logging.info(f"The outputs are being saved in {args.output_folder}")
@@ -46,12 +60,14 @@ logging.info(f"Val set: {val_ds}")
 
 test_ds = datasets_ws.BaseDataset(args, args.datasets_folder, "pitts30k", "test")
 logging.info(f"Test set: {test_ds}")
-checkpoint = []
+
 #### Initialize model
 model = network.GeoLocalizationNet(args)
 if args.load_from != "":
-    checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
-    model.load_state_dict(checkpoint['model_state_dict'])
+    logging.info(f"Loading previous model from cloud")
+    util.init_tmp_dir(args)
+    args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
+    model.load_state_dict(args.checkpoint['model_state_dict'])
 model = model.to(args.device)
 
 #### Setup Optimizer and Loss
@@ -64,11 +80,13 @@ starting_epoch = 0
 
 #### Loading model
 if args.load_from != "":
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    starting_epoch = checkpoint['epoch_num'] + 1 
+    optimizer.load_state_dict(args.checkpoint['optimizer_state_dict'])
+    starting_epoch = args.checkpoint['epoch_num'] + 1 
     #loss = checkpoint['loss']
-    best_r5 = checkpoint['best_r5']
-    not_improved_num = checkpoint['not_improved_num']
+    best_r5 = args.checkpoint['best_r5']
+    not_improved_num = args.checkpoint['not_improved_num']
+    args.lr = args.checkpoint['lr']
+    args.train_positives_dist_threshold = args.checkpoint['train_positives_dist_threshold']
 
 
 
@@ -149,8 +167,12 @@ for epoch_num in range(args.epochs_num):
     # Save checkpoint, which contains all training parameters
     util.save_checkpoint(args, {"epoch_num": epoch_num, "model_state_dict": model.state_dict(),
         "optimizer_state_dict": optimizer.state_dict(), "recalls": recalls, "best_r5": best_r5,
-        "not_improved_num": not_improved_num
+        "not_improved_num": not_improved_num, "lr" : args.lr, "train_positives_dist_threshold": args.train_positives_dist_threshold
     }, is_best, filename="last_model.pth")
+
+    if args.use_mega == "y":
+        #upload to mega
+        util.upload_checkpoint(args, is_best)
     
     # If recall@5 did not improve for "many" epochs, stop training
     if is_best:
