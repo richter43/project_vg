@@ -1,5 +1,6 @@
 
 import argparse
+import sys
 
 
 def parse_arguments():
@@ -49,6 +50,13 @@ def parse_arguments():
     # %% New arguments
     parser.add_argument("--layer", type=str, default="avg",
                         help="Model frontend used (E.g: \"avg\", \"net\")")
+    parser.add_argument("--clusters", default=64, type=int,
+                        help="Number of cluster centers to compute")
+    parser.add_argument("--dataset", type=str, required=True,
+                        help="Chosen dataset",
+                        choices=["pitts30k", "st_lucia"])
+    parser.add_argument("--split", type=str, required=(sys.argv[0].split("/")[-1] == 'cluster.py'),
+                        choices=["train", "test", "val"])
 
     args = parser.parse_args()
 

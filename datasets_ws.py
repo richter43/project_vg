@@ -9,6 +9,7 @@ from PIL import Image
 from os.path import join
 import torch
 import time
+from multiprocessing import Pool
 
 import torch.utils.data as data
 import torchvision.transforms as transforms
@@ -123,6 +124,10 @@ class BaseDataset(data.Dataset):
     def get_positives(self):
         return self.soft_positives_per_query
 
+# Scrapped idea, memory usage is too high
+# def faiss_range_search(index: faiss.IndexFlatL2, query_batch: np.ndarray, args: Namespace) -> Tuple[np.ndarray, np.ndarray]:
+#     return index.range_search(query_batch, args.train_positives_dist_threshold)
+
 
 class TripletsDataset(BaseDataset):
     """Dataset used for training, it is used to compute the triplets
@@ -144,7 +149,11 @@ class TripletsDataset(BaseDataset):
         self.is_inference = False
 
         # Find hard_positives_per_query, which are within train_positives_dist_threshold (10 meters)
-        # TODO: maybe faiss
+        # Report: faiss CAN'T  be used here due to an obscure decision for batch computation
+        # (Using IndexFlatL2 with an input's shape larger than 20 changes how the computation is done (Not euclidean distance) which, for our purpose, ends up with a distance vector filled with zeroes)
+        # Note: there's a lot of repeated vectors, how could this be improved?
+        # Doesn't seem to be worth it, this is computed only once
+
         knn = NearestNeighbors(n_jobs=-1)
         knn.fit(self.database_utms)
         self.hard_positives_per_query = list(knn.radius_neighbors(self.queries_utms,
@@ -202,6 +211,7 @@ class TripletsDataset(BaseDataset):
         # A local index is just a list of tuples that contain the indexes of the images
         # relative to the given set of images (for instance, given a single set of triplet images
         # the indexes are query_image=0 pos_image->1 neg_image->[2,11])
+
         for neg_num in range(len(neg_indexes)):
             triplets_local_indexes = torch.cat(
                 (triplets_local_indexes, torch.tensor([0, 1, 2+neg_num]).reshape(1, 3)))
