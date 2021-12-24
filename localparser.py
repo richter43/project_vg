@@ -1,6 +1,6 @@
 
 import argparse
-import sys
+from os.path import basename, join
 
 
 def parse_arguments():
@@ -55,8 +55,10 @@ def parse_arguments():
     parser.add_argument("--dataset", type=str, required=True,
                         help="Chosen dataset",
                         choices=["pitts30k", "st_lucia"])
-    parser.add_argument("--split", type=str, required=(sys.argv[0].split("/")[-1] == 'cluster.py'),
+    parser.add_argument("--split", type=str, required=(basename(__file__) == 'cluster.py'),
                         choices=["train", "test", "val"])
+    parser.add_argument("--ancillaries_file", type=str, default=join(".", "extra", "ancillaries"),
+                        help="File which contains all extra initialization values for NetVLAD")
 
     args = parser.parse_args()
 

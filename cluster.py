@@ -38,8 +38,10 @@ def setup(args: Namespace) -> datetime:
 
     logging.info(f"Computing {args.clusters} centroids")
 
-    if not exists(join(".", "ancillaries")):
-        os.makedirs("ancillaries")
+    extra_folder = join(".", "extra")
+
+    if not exists(extra_folder):
+        os.makedirs(extra_folder)
 
     return start_time
 
@@ -73,7 +75,7 @@ if __name__ == "__main__":
     kmeans.train(cache)
 
     # Saving centroids
-    torch.save({"centroids": kmeans.centroids},
-               join(".", "ancillaries", "centroids"))
+    torch.save({"centroids": kmeans.centroids, "traindesc": cache},
+               args.ancillaries_file)
 
     logging.debug(f"Elapsed time: {datetime.now() - start_time}")
