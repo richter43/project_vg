@@ -92,7 +92,7 @@ if args.load_from != "":
 
 logging.info(f"Output dimension of the model is {args.features_dim}")
 
-if epoch_num != 0:
+if starting_epoch != 0:
     logging.info(f"starting epoch is not zero, iterating through dataloader")
 
 #### Training loop
