@@ -1,3 +1,4 @@
 .spyproject
 .git
+runs/
 __pycache__
