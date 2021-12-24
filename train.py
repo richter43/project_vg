@@ -33,10 +33,10 @@ if args.load_from == "":
     if args.use_mega == "y":
         # create the folder in the cloud, it will store your model
         args.m.create_folder(args.output_folder)
-        args.mega_folder = util.MyFind(m,args.output_folder)
+        args.mega_folder = util.MyFind(args.m,args.output_folder)
 else:
     assert args.use_mega == "y"
-    args.mega_folder = util.MyFind(m, args.load_from)
+    args.mega_folder = util.MyFind(args.m, args.load_from)
     assert args.mega_folder != None
 
     logging.info(f"Resuming training starting from checkpoint in {args.load_from}")
@@ -91,6 +91,9 @@ if args.load_from != "":
 
 
 logging.info(f"Output dimension of the model is {args.features_dim}")
+
+if epoch_num != 0:
+    logging.info(f"starting epoch is not zero, iterating through dataloader")
 
 #### Training loop
 for epoch_num in range(args.epochs_num):

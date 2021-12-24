@@ -12,24 +12,26 @@ def save_checkpoint(args, state, is_best, filename):
         shutil.copyfile(model_path, join(args.output_folder, "best_model.pth"))
 
 def upload_checkpoint(args, is_best):
+    mega = Mega()
+    args.m = mega.login(args.mega_username, args.pwd)
     files = args.m.get_files_in_node(args.mega_folder[0]) #this is a dictionary
     for key in files:
         curr = files[key]
         #don't overwrite best model
-        if curr[1]['a']['n'] != "best_model.pth" or is_best:
+        if curr['a']['n'] != "best_model.pth" or is_best:
             args.m.destroy(curr['h'])
             args.m.upload(join(args.output_folder, curr['a']['n']), args.mega_folder[0])
 
 def init_mega(args):
     mega = Mega()
-    pwd = getpass.getpass(f"insert password for mega account ({args.mega_username}):")
-    args.m = mega.login(args.username, pwd)
+    args.pwd = getpass.getpass(f"insert password for mega account ({args.mega_username}):")
+    args.m = mega.login(args.mega_username, args.pwd)
 
 def init_tmp_dir(args):
-    last = args.m.find(join(args.load_from, "last_model.pth"), exclude_deleted=True)
+    last = MyFind(args.m,join(args.load_from, "last_model.pth"))
     if last != None:
         args.m.download(last, args.output_folder)
-    best = args.m.find(join(args.load_from, "best_model.pth"),exclude_deleted=True)
+    best = MyFind(args.m, join(args.load_from, "best_model.pth"))
     if best != None:
         args.m.download(best, args.output_folder)
 

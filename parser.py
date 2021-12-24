@@ -41,7 +41,7 @@ def parse_arguments():
     parser.add_argument("--layer", type =str, default = "avg", help = "Pooling layer used. Can be 'avg','net' and 'gem' ")
     parser.add_argument("--num_clusters", type =int, default = 64, help = "Number of clusters used in the NetVLAD layer")
     parser.add_argument("--load_from", type = str, default = "", help = "Folder (in cloud) of the model to be loaded. Resumes training from checkpoint")
-    parser.add_argument("--use_mega", typer = str, default = "y", help = "Load/store your result into the mega cloud")
+    parser.add_argument("--use_mega", type = str, default = "y", help = "Load/store your result into the mega cloud")
     parser.add_argument("--mega_username", type = str, default = "c.blangio@gmail.com", help = "Username of the owner of the Mega cloud you want to access for loading a model")
 
     args = parser.parse_args()
