@@ -20,7 +20,6 @@ from network import GeoLocalizationNet
 from localparser import parse_arguments
 from datasets_ws import BaseDataset, TripletsDataset
 import commons
-import util
 
 
 def setup(args: Namespace) -> datetime:
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     kmeans.train(cache)
 
     # Saving centroids
-    torch.save({"centroids, kmeans.centroids"},
+    torch.save({"centroids": kmeans.centroids},
                join(".", "ancillaries", "centroids"))
 
     logging.debug(f"Elapsed time: {datetime.now() - start_time}")
