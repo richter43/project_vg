@@ -17,7 +17,7 @@ def upload_checkpoint(args, is_best):
     files = args.m.get_files_in_node(args.mega_folder[0]) #this is a dictionary
     i=0
     for key in files:
-        i++
+        i+=1
         curr = files[key]
         #don't overwrite best model
         if curr['a']['n'] != "best_model.pth" or is_best:
