@@ -5,7 +5,8 @@ from os.path import join
 from mega import Mega
 import getpass
 
-def save_checkpoint(args, state, is_best, filename):
+
+def save_checkpoint(args, state, is_best: bool, filename: str) -> None:
     model_path = join(args.output_folder, filename)
     torch.save(state, model_path)
     if is_best:
