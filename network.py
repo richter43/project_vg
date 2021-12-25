@@ -1,4 +1,3 @@
-
 import torch
 import logging
 import torchvision
@@ -11,6 +10,7 @@ class GeoLocalizationNet(nn.Module):
     The backbone is a (cropped) ResNet-18, and the aggregation is a L2
     normalization followed by max pooling. T
     """
+
     def __init__(self, args):
         super().__init__()
         self.backbone = get_backbone(args)
@@ -33,7 +33,8 @@ def get_backbone(args):
             break
         for params in child.parameters():
             params.requires_grad = False
-    logging.debug("Train only conv4 of the ResNet-18 (remove conv5), freeze the previous ones")
+    logging.debug(
+        "Train only conv4 of the ResNet-18 (remove conv5), freeze the previous ones")
     layers = list(backbone.children())[:-3]
     backbone = torch.nn.Sequential(*layers)
 
@@ -49,15 +50,17 @@ def get_backbone(args):
 class Flatten(torch.nn.Module):
     def __init__(self):
         super().__init__()
+
     def forward(self, x):
         assert x.shape[2] == x.shape[3] == 1
-        return x[:,:,0,0]
+        return x[:, :, 0, 0]
 
 
 class L2Norm(nn.Module):
     def __init__(self, dim=1):
         super().__init__()
         self.dim = dim
+
     def forward(self, x):
         return F.normalize(x, p=2, dim=self.dim)
 
