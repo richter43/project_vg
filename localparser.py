@@ -48,7 +48,7 @@ def parse_arguments():
     
     # Layer to be used and related parameters
     # %% New arguments
-    parser.add_argument("--layer", type=str, default="avg",
+    parser.add_argument("--layer", type=str, default="avg", choices=["avg", "net", "gem"],
                         help="Model frontend used (E.g: \"avg\", \"net\")")
     parser.add_argument("--num_clusters", type =int, default = 64, 
                         help = "Number of clusters used in the NetVLAD layer")
@@ -58,6 +58,10 @@ def parse_arguments():
                         help = "Load/store your result into the mega cloud")
     parser.add_argument("--mega_username", type = str, default = "c.blangio@gmail.com", 
                         help = "Username of the owner of the Mega cloud you want to access for loading a model")
+    parser.add_argument("--pk", type=int, default=3, 
+                        help="Exponent of GeM pooling")
+    parser.add_argument("--minval", type=float, default=1e-6, 
+                        help="Miniminal value that is allowed in order to avoid computation skewing (i.e: dividing by zero)")
 
     args = parser.parse_args()
 
