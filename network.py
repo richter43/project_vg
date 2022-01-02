@@ -21,7 +21,7 @@ class GeoLocalizationNet(nn.Module):
         elif args.layer == "net":
             self.aggregation = NetVLAD(args.num_clusters)
         elif args.layer == "gem":
-            self.aggregation = nn.Sequential(GeM(args), L2Norm())
+            self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
 
     def forward(self, x):
         x = self.backbone(x)
