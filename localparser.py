@@ -1,5 +1,6 @@
 
 import argparse
+from os.path import basename, join
 
 
 def parse_arguments():
@@ -50,14 +51,25 @@ def parse_arguments():
     # %% New arguments
     parser.add_argument("--layer", type=str, default="avg",
                         help="Model frontend used (E.g: \"avg\", \"net\")")
-    parser.add_argument("--num_clusters", type =int, default = 64, 
-                        help = "Number of clusters used in the NetVLAD layer")
+
     parser.add_argument("--load_from", type = str, default = "", 
                         help = "Folder (in cloud) of the model to be loaded. Resumes training from checkpoint")
     parser.add_argument("--use_mega", type = str, default = "y", 
                         help = "Load/store your result into the mega cloud")
     parser.add_argument("--mega_username", type = str, default = "c.blangio@gmail.com", 
                         help = "Username of the owner of the Mega cloud you want to access for loading a model")
+    #TODO: duplicates, needs to refactor
+    parser.add_argument("--num_clusters", type =int, default = 64, 
+                        help = "Number of clusters used in the NetVLAD layer")
+    parser.add_argument("--clusters", default=64, type=int,
+                        help="Number of cluster centers to compute")
+    parser.add_argument("--dataset", type=str, required=True,
+                        help="Chosen dataset",
+                        choices=["pitts30k", "st_lucia"])
+    parser.add_argument("--split", type=str, required=(basename(__file__) == 'cluster.py'),
+                        choices=["train", "test", "val"])
+    parser.add_argument("--ancillaries_file", type=str, default=join(".", "extra", "ancillaries"),
+                        help="File which contains all extra initialization values for NetVLAD")
 
     args = parser.parse_args()
 

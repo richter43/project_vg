@@ -113,7 +113,6 @@ venv.bak/
 # Spyder project settings
 .spyderproject
 .spyproject
-
 # Rope project settings
 .ropeproject
 
@@ -133,3 +132,4 @@ dmypy.json
 
 #Avoid storing logs
 runs/
+

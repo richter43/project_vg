@@ -3,6 +3,11 @@ import logging
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+
+from sklearn.neighbors import NearestNeighbors
+
+from argparse import Namespace
 
 
 class GeoLocalizationNet(nn.Module):
@@ -11,15 +16,24 @@ class GeoLocalizationNet(nn.Module):
     normalization followed by max pooling. T
     """
 
-    def __init__(self, args):
+    def __init__(self, args: Namespace, cluster: bool = False):
         super().__init__()
         self.backbone = get_backbone(args)
-        if args.layer == "avg":
-            self.aggregation = nn.Sequential(L2Norm(),
-                                            torch.nn.AdaptiveAvgPool2d(1),
-                                            Flatten())
-        elif args.layer == "net":
-            self.aggregation = NetVLAD(args.num_clusters)
+
+        if not cluster:
+            if args.layer == "avg":
+                self.aggregation = nn.Sequential(L2Norm(),
+                                                 torch.nn.AdaptiveAvgPool2d(1),
+                                                 Flatten())
+            elif args.layer == "net":
+                self.aggregation = NetVLAD(args.clusters)
+        else:
+            # Redundant, however, may be useful if we were to change the aggregation method for obtaining centroids, if not found just refactor
+            self.aggregation = nn.Sequential(\
+                # L2Norm(),
+                torch.nn.AdaptiveAvgPool2d(1),
+                Flatten())
+
     def forward(self, x):
         x = self.backbone(x)
         x = self.aggregation(x)
@@ -38,12 +52,12 @@ def get_backbone(args):
     layers = list(backbone.children())[:-3]
     backbone = torch.nn.Sequential(*layers)
 
-    
-    #features_dim is used in datasets_ws.compute_cache to build a cache of proper size. Not modifying it to fit current output leads to error
+    # features_dim is used in datasets_ws.compute_cache to build a cache of proper size. Not modifying it to fit current output leads to error
     if args.layer == "avg":
         args.features_dim = 256  # Number of channels in conv4
     elif args.layer == "net":
-        args.features_dim = 256 * args.num_clusters # NetVLAD should output a KxDx1 (?), with K = num_clusters and D = features of local descriptor xi
+        # NetVLAD should output a KxDx1 (?), with K = num_clusters and D = features of local descriptor xi
+        args.features_dim = 256 * args.clusters
     return backbone
 
 
@@ -64,17 +78,37 @@ class L2Norm(nn.Module):
     def forward(self, x):
         return F.normalize(x, p=2, dim=self.dim)
 
+
 class NetVLAD(nn.Module):
     def __init__(self, num_clusters):
         super(NetVLAD, self).__init__()
         self.num_clusters = num_clusters
-        self.dim = 256 # should be the channels given by conv4
+        self.dim = 256  # should be the channels given by conv4
 
-        #1x1 convolution
+        # 1x1 convolution
         self.conv = nn.Conv2d(self.dim, num_clusters, kernel_size=(1, 1))
-        #cluster centers are also learnable parameters (initialized randomly)
-        self.centroids = nn.Parameter(torch.rand(num_clusters, self.dim)) 
-    
+        # cluster centers are also learnable parameters (initialized randomly)
+        self.centroids = nn.Parameter(torch.rand(num_clusters, self.dim))
+
+    def init_params(self, clusters: np.ndarray, traindescs: np.ndarray):
+
+        knn = NearestNeighbors(n_jobs=-1)  # TODO faiss?
+        knn.fit(traindescs)
+        del traindescs
+        dsSq = np.square(knn.kneighbors(clusters, 2)[0])
+        del knn
+        # Appendix A, the ratio of the best and second best soft assignments must be around 100
+        self.alpha = (-np.log(0.01) / np.mean(dsSq[:, 1] - dsSq[:, 0])).item()
+        self.centroids = nn.Parameter(torch.from_numpy(clusters))
+        del clusters, dsSq
+
+        self.conv.weight = nn.Parameter(
+            (2.0 * self.alpha * self.centroids).unsqueeze(-1).unsqueeze(-1)
+        )
+        self.conv.bias = nn.Parameter(
+            - self.alpha * self.centroids.norm(dim=1)
+        )
+
     def forward(self, x):
         N, C = x.shape[:2]
 
@@ -85,18 +119,19 @@ class NetVLAD(nn.Module):
         soft_assign = F.softmax(soft_assign, dim=1)
 
         x_flatten = x.view(N, C, -1)
-        
+
         # calculate residuals to each clusters
-        vlad = torch.zeros([N, self.num_clusters, C], dtype=x.dtype, layout=x.layout, device=x.device)
-        for C in range(self.num_clusters): # slower than non-looped, but lower memory usage 
+        vlad = torch.zeros([N, self.num_clusters, C],
+                           dtype=x.dtype, layout=x.layout, device=x.device)
+        for C in range(self.num_clusters):  # slower than non-looped, but lower memory usage
             residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - \
-                    self.centroids[C:C+1, :].expand(x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
-            residual *= soft_assign[:,C:C+1,:].unsqueeze(2)
-            vlad[:,C:C+1,:] = residual.sum(dim=-1)
+                self.centroids[C:C+1, :].expand(
+                    x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
+            residual *= soft_assign[:, C:C+1, :].unsqueeze(2)
+            vlad[:, C:C+1, :] = residual.sum(dim=-1)
 
         vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
         vlad = vlad.view(x.size(0), -1)  # flatten
         vlad = F.normalize(vlad, p=2, dim=1)  # L2 normalize
-
 
         return vlad
