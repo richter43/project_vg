@@ -6,7 +6,11 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
-
+import localparser as parser
+import util
+import commons
+import datasets_ws
+import network
 
 def test(args, eval_ds, model):
     """Compute features of the given dataset and compute the recalls."""
@@ -56,4 +60,60 @@ def test(args, eval_ds, model):
     recalls = recalls / eval_ds.queries_num * 100
     recalls_str = ", ".join([f"R@{val}: {rec:.1f}" for val, rec in zip(args.recall_values, recalls)])
     return recalls, recalls_str
+
+if __name__ == "__main__":
+    # Parser, ignore
+    args = parser.parse_arguments()
+    
+    #for loading model from cloud
+    if args.use_mega == "y":
+        assert args.load_from != "" #if you're using mega, you have to specify the folder in the cloud where model is stored
+        assert args.model_folder == "" #if you're using mega it is not necessary to specify the local folder of the model (it will be downloaded)
+        util.init_mega(args)
+        args.mega_folder = util.MyFind(args.m, args.load_from)
+        assert args.mega_folder != None #checking that the folder exists in cloud
+        args.output_folder = args.load_from #just for compatibility with util functions
+    else:
+        assert args.model_folder != "" #you need to specify the folder where the model is stored
+        args.output_folder = args.model_folder #compatibility with util functions
+    
+    # Logging setup - self-explanatory
+    commons.setup_logging(args.output_folder)
+    # Making computation deterministic given a predetermined seed - self-explanatory
+    commons.make_deterministic(args.seed)
+
+    logging.info(f"Arguments: {args}")
+    logging.info(f"The model is being loaded from {args.output_folder}")
+    logging.info(
+        f"Using {torch.cuda.device_count()} GPUs and {multiprocessing.cpu_count()} CPUs")
+
+    logging.debug(f"Loading dataset from folder {args.datasets_folder}")
+
+    
+    test_ds = datasets_ws.BaseDataset(
+        args, args.datasets_folder, args.dataset, "test")
+    logging.info(f"Test set: {test_ds}")
+    
+    # %% Initialize model
+    model = network.GeoLocalizationNet(args)
+    # Loading pre-trained state dicts
+    if args.load_from != "":
+        logging.info(f"Loading previous model from cloud")
+        util.init_tmp_dir(args)
+        args.checkpoint = torch.load(join(args.output_folder, "best_model.pth"))
+        model.load_state_dict(args.checkpoint['model_state_dict'])
+    # Loading initial cluster values
+    if exists(args.ancillaries_file) and args.layer == "net":
+        ancillaries = torch.load(args.ancillaries_file)
+        centroids = ancillaries["centroids"]
+        traindesc = ancillaries["traindesc"]
+
+        model.aggregation.init_params(centroids, traindesc)
+
+    model = model.to(args.device)
+    recalls, recalls_str = test(args, test_ds, model)
+    logging.info(f"Recalls on {test_ds}: {recalls_str}")
+
+
+
 
