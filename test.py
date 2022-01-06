@@ -11,7 +11,8 @@ import util
 import commons
 import datasets_ws
 import network
-
+import multiprocessing
+from os.path import join,exists
 def test(args, eval_ds, model):
     """Compute features of the given dataset and compute the recalls."""
     model = model.eval()
@@ -69,6 +70,7 @@ if __name__ == "__main__":
     if args.use_mega == "y":
         assert args.load_from != "" #if you're using mega, you have to specify the folder in the cloud where model is stored
         assert args.model_folder == "" #if you're using mega it is not necessary to specify the local folder of the model (it will be downloaded)
+        assert args.load_from != "" #this is where you should specify the cloud folder containing the model
         util.init_mega(args)
         args.mega_folder = util.MyFind(args.m, args.load_from)
         assert args.mega_folder != None #checking that the folder exists in cloud
@@ -100,8 +102,10 @@ if __name__ == "__main__":
     if args.load_from != "":
         logging.info(f"Loading previous model from cloud")
         util.init_tmp_dir(args)
-        args.checkpoint = torch.load(join(args.output_folder, "best_model.pth"))
-        model.load_state_dict(args.checkpoint['model_state_dict'])
+    
+    args.checkpoint = torch.load(join(args.output_folder, "best_model.pth"))
+    model.load_state_dict(args.checkpoint['model_state_dict'])
+    
     # Loading initial cluster values
     if exists(args.ancillaries_file) and args.layer == "net":
         ancillaries = torch.load(args.ancillaries_file)

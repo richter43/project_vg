@@ -18,8 +18,7 @@ class GeoLocalizationNet(nn.Module):
 
     def __init__(self, args: Namespace, cluster: bool = False):
         super().__init__()
-        self.backbone = get_backbone(args)
-
+        self.backbone = get_backbone(args)        
         if not cluster:
             if args.layer == "avg":
                 self.aggregation = nn.Sequential(L2Norm(),
