@@ -27,6 +27,8 @@ class GeoLocalizationNet(nn.Module):
                                                  Flatten())
             elif args.layer == "net":
                 self.aggregation = NetVLAD(args.clusters)
+            elif args.layer == "gem":
+                self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
         else:
             # Redundant, however, may be useful if we were to change the aggregation method for obtaining centroids, if not found just refactor
             self.aggregation = nn.Sequential(\
@@ -41,23 +43,25 @@ class GeoLocalizationNet(nn.Module):
 
 
 def get_backbone(args):
-    backbone = torchvision.models.resnet18(pretrained=True)
+    backbone = torchvision.models.resnet18(pretrained=True, progress=False)
     for name, child in backbone.named_children():
         if name == "layer3":
             break
         for params in child.parameters():
             params.requires_grad = False
     logging.debug(
-        "Train only conv4 of the ResNet-18 (remove conv5), freeze the previous ones")
+        "Train only conv4 of the ResNet-18 (remove conv5), freeze the previous ones"
+    )
     layers = list(backbone.children())[:-3]
     backbone = torch.nn.Sequential(*layers)
 
     # features_dim is used in datasets_ws.compute_cache to build a cache of proper size. Not modifying it to fit current output leads to error
-    if args.layer == "avg":
+    if args.layer == "avg" or args.layer == "gem":
         args.features_dim = 256  # Number of channels in conv4
     elif args.layer == "net":
-        # NetVLAD should output a KxDx1 (?), with K = num_clusters and D = features of local descriptor xi
-        args.features_dim = 256 * args.clusters
+        args.features_dim = (
+            256 * args.num_clusters
+        )  # NetVLAD should output a KxDx1 (?), with K = num_clusters and D = features of local descriptor xi
     return backbone
 
 
@@ -121,17 +125,32 @@ class NetVLAD(nn.Module):
         x_flatten = x.view(N, C, -1)
 
         # calculate residuals to each clusters
-        vlad = torch.zeros([N, self.num_clusters, C],
-                           dtype=x.dtype, layout=x.layout, device=x.device)
-        for C in range(self.num_clusters):  # slower than non-looped, but lower memory usage
-            residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - \
-                self.centroids[C:C+1, :].expand(
-                    x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
-            residual *= soft_assign[:, C:C+1, :].unsqueeze(2)
-            vlad[:, C:C+1, :] = residual.sum(dim=-1)
+        vlad = torch.zeros(
+            [N, self.num_clusters, C], dtype=x.dtype, layout=x.layout, device=x.device
+        )
+        for C in range(
+            self.num_clusters
+        ):  # slower than non-looped, but lower memory usage
+            residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - self.centroids[
+                C : C + 1, :
+            ].expand(x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
+            residual *= soft_assign[:, C : C + 1, :].unsqueeze(2)
+            vlad[:, C : C + 1, :] = residual.sum(dim=-1)
 
         vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
         vlad = vlad.view(x.size(0), -1)  # flatten
         vlad = F.normalize(vlad, p=2, dim=1)  # L2 normalize
 
         return vlad
+
+
+class GeM(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        self.pk = torch.nn.Parameter(torch.zeros(1) + args.pk)
+        self.minval = args.minval
+
+    def forward(self, x):
+        return F.avg_pool2d(
+            x.clamp(min=self.minval).pow(self.pk), (x.size(-2), x.size(-1))
+        ).pow(1.0 / self.pk)
