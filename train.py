@@ -1,6 +1,6 @@
 import multiprocessing
 import test
-from os.path import join
+from os.path import join, exists
 from datetime import datetime
 import math
 import logging
@@ -64,24 +64,34 @@ logging.info(
 logging.debug(f"Loading dataset Pitts30k from folder {args.datasets_folder}")
 
 triplets_ds = datasets_ws.TripletsDataset(
-    args, args.datasets_folder, "pitts30k", "train", args.negs_num_per_query)
+    args, args.datasets_folder, args.dataset, "train", args.negs_num_per_query)
 
 logging.info(f"Train query set: {triplets_ds}")
 
-val_ds = datasets_ws.BaseDataset(args, args.datasets_folder, "pitts30k", "val")
+val_ds = datasets_ws.BaseDataset(
+    args, args.datasets_folder, args.dataset, "val")
 logging.info(f"Val set: {val_ds}")
 
 test_ds = datasets_ws.BaseDataset(
-    args, args.datasets_folder, "pitts30k", "test")
+    args, args.datasets_folder, args.dataset, "test")
 logging.info(f"Test set: {test_ds}")
 
 # %% Initialize model
 model = network.GeoLocalizationNet(args)
+# Loading pre-trained state dicts
 if args.load_from != "":
     logging.info(f"Loading previous model from cloud")
     util.init_tmp_dir(args)
     args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
     model.load_state_dict(args.checkpoint['model_state_dict'])
+# Loading initial cluster values
+if exists(args.ancillaries_file) and args.layer == "net":
+    ancillaries = torch.load(args.ancillaries_file)
+    centroids = ancillaries["centroids"]
+    traindesc = ancillaries["traindesc"]
+
+    model.aggregation.init_params(centroids, traindesc)
+
 model = model.to(args.device)
 
 # %% Setup Optimizer and Loss
@@ -162,6 +172,7 @@ for epoch_num in range(args.epochs_num):
             del features
             loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
 
+            # set_to_none=True local optimization does not translate to global time optimization
             optimizer.zero_grad()
             loss_triplet.backward()
             optimizer.step()

@@ -1,5 +1,6 @@
 
 import argparse
+from os.path import basename, join
 
 
 def parse_arguments():
@@ -50,8 +51,7 @@ def parse_arguments():
     # %% New arguments
     parser.add_argument("--layer", type=str, default="avg", choices=["avg", "net", "gem"],
                         help="Model frontend used (E.g: \"avg\", \"net\")")
-    parser.add_argument("--num_clusters", type =int, default = 64, 
-                        help = "Number of clusters used in the NetVLAD layer")
+
     parser.add_argument("--load_from", type = str, default = "", 
                         help = "Folder (in cloud) of the model to be loaded. Resumes training from checkpoint")
     parser.add_argument("--use_mega", type = str, default = "y", 
@@ -62,6 +62,18 @@ def parse_arguments():
                         help="Exponent of GeM pooling")
     parser.add_argument("--minval", type=float, default=1e-6, 
                         help="Miniminal value that is allowed in order to avoid computation skewing (i.e: dividing by zero)")
+    #TODO: duplicates, needs to refactor
+    parser.add_argument("--num_clusters", type =int, default = 64, 
+                        help = "Number of clusters used in the NetVLAD layer")
+    parser.add_argument("--clusters", default=64, type=int,
+                        help="Number of cluster centers to compute")
+    parser.add_argument("--dataset", type=str, required=True,
+                        help="Chosen dataset",
+                        choices=["pitts30k", "st_lucia"])
+    parser.add_argument("--split", type=str, required=(basename(__file__) == 'cluster.py'),
+                        choices=["train", "test", "val"])
+    parser.add_argument("--ancillaries_file", type=str, default=join(".", "extra", "ancillaries"),
+                        help="File which contains all extra initialization values for NetVLAD")
 
     args = parser.parse_args()
 
