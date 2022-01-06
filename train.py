@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch import nn
-from threading import Thread
+
 
 import localparser as parser
 import util
@@ -207,7 +207,7 @@ for epoch_num in range(args.epochs_num):
 
     if args.use_mega == "y":
         #upload to mega. Done on a different thread. I'm assuming this is a much faster operation than a training epoch
-        Thread(target = util.upload_checkpoint, args = (args, is_best))
+        util.upload_checkpoint(args, is_best)
     
     # If recall@5 did not improve for "many" epochs, stop training
     if is_best:
