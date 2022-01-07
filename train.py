@@ -10,6 +10,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 from torch import nn
 
+
 import localparser as parser
 import util
 import commons
@@ -43,7 +44,7 @@ else:
     assert args.mega_folder != None
 
     logging.info(f"Resuming training starting from checkpoint in {args.load_from}")
-    args.output_folder = join("runs", args.exp_name, start_time.strftime('%Y-%m-%d_%H-%M-%S'))
+    args.output_folder = args.load_from
 
 
 # Logging setup - self-explanatory
@@ -132,7 +133,8 @@ for epoch_num in range(args.epochs_num):
     #we will train with the same data we used during the very first training session
     if epoch_num>=starting_epoch:
         logging.info(f"Start training epoch: {epoch_num:02d}")
-    
+    else:
+        logging.info(f"database iteration is {epoch_num}")
     epoch_start_time = datetime.now()
     epoch_losses = np.zeros((0, 1), dtype=np.float32)
 
@@ -140,6 +142,8 @@ for epoch_num in range(args.epochs_num):
     loops_num = math.ceil(args.queries_per_epoch / args.cache_refresh_rate)
     for loop_num in range(loops_num):
         logging.debug(f"Cache: {loop_num} / {loops_num}")
+
+        
 
         # Compute triplets to use in the triplet loss
         triplets_ds.is_inference = True
@@ -209,7 +213,7 @@ for epoch_num in range(args.epochs_num):
                         }, is_best, filename="last_model.pth")
 
     if args.use_mega == "y":
-        #upload to mega
+        #upload to mega. Done on a different thread. I'm assuming this is a much faster operation than a training epoch
         util.upload_checkpoint(args, is_best)
     
     # If recall@5 did not improve for "many" epochs, stop training

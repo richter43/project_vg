@@ -74,6 +74,8 @@ def parse_arguments():
                         choices=["train", "test", "val"])
     parser.add_argument("--ancillaries_file", type=str, default=join(".", "extra", "ancillaries"),
                         help="File which contains all extra initialization values for NetVLAD")
+    parser.add_argument("--model_folder", type = str, default = "", 
+                        help = "Folder (local) where the model is stored. This parameter is used only for testing in test.py for an already trained model")
     
     parser.add_argument("--optim", type=str, default="ADAM", choices=["ADAM", "SGD"])
     
