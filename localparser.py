@@ -74,6 +74,12 @@ def parse_arguments():
                         choices=["train", "test", "val"])
     parser.add_argument("--ancillaries_file", type=str, default=join(".", "extra", "ancillaries"),
                         help="File which contains all extra initialization values for NetVLAD")
+    
+    parser.add_argument("--optim", type=str, default="ADAM", choices=["ADAM", "SGD"])
+    
+    #%% Optimizer arguments
+    parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay for SGD.')
+    parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
 
     args = parser.parse_args()
 

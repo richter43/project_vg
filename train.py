@@ -95,7 +95,11 @@ if exists(args.ancillaries_file) and args.layer == "net":
 model = model.to(args.device)
 
 # %% Setup Optimizer and Loss
-optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+if args.optim.lower() == "adam":
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+elif args.optim.lower() == "sgd":
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum)
+
 # Metric used in ML in order to minimize the distance to a positive example and maximize the distance
 # to a negative example given an input value
 criterion_triplet = nn.TripletMarginLoss(
