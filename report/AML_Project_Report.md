@@ -26,16 +26,16 @@ Firstly, the NetVLAD network was implemented and tested. Before giving some numb
 At the beginning of training, we encountered with low recall rates around 27% (recall rate@5) with the following implementation details:
 
 * Margin = 0.1 
-* Learning rate = 0.0001 
+* Learning rate = 0.00001 
 * Number of epoch = 5 
 * Momentum = 0.9 
 * Weight decay = 0.001
 
-Additionally, longer training times than the original paper were observed. Afterwards, in order to overcome these issues2 different solutions were proposed: clustering and checkpoints, since the issue was assumed to revolve around the centroids.
+Additionally, longer training times than the original paper and an inconsiderable increase of recall rate with a learning rate of 0.0001 were observed. Afterwards, in order to overcome these issues, 2 different solutions were proposed: clustering and checkpoints since the issue was assumed to revolve around the centroids.
 
 Clustering, the idea of a solution was inspired by the &quot;get\_cluster&quot; function of the given NetVLAD template. The basic idea of this solution is extracting the centroids of clusters with the usage of mini-batches and storing the results in a cache. After then, it computes k-means using the faiss library. Nevertheless, this attempt has increased recall rates just to around 31% and took the same training times.
 
-Checkpoints, the purpose of checkpoints is to keep the current weights in a repository against random initialization of centroids. While training in the Colab, the weights were lost due to deductions. The implementation of checkpoint solved both the recall rate and long training issues. The recall rate increased to 77.4% in the top 5 samples while the training was taking 21 mins for 1 epoch.
+Checkpoints, the purpose of checkpoints is to keep the current weights in a repository against random initialization of centroids. While training in the Colab, the weights were lost due to sudden deductions. The implementation of checkpoint solved both the recall rate and long training issues. The recall rate increased to 77.4% in the recall rate@5 while the training was taking 21 mins for 1 epoch.
 
 # 3) Personal Contribution
 

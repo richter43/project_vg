@@ -3,6 +3,11 @@ import logging
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+
+from sklearn.neighbors import NearestNeighbors
+
+from argparse import Namespace
 
 
 class GeoLocalizationNet(nn.Module):
@@ -11,17 +16,25 @@ class GeoLocalizationNet(nn.Module):
     normalization followed by max pooling. T
     """
 
-    def __init__(self, args):
+    def __init__(self, args: Namespace, cluster: bool = False):
         super().__init__()
         self.backbone = get_backbone(args)
-        if args.layer == "avg":
-            self.aggregation = nn.Sequential(
-                L2Norm(), torch.nn.AdaptiveAvgPool2d(1), Flatten()
-            )
-        elif args.layer == "net":
-            self.aggregation = NetVLAD(args.num_clusters)
-        elif args.layer == "gem":
-            self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
+
+        if not cluster:
+            if args.layer == "avg":
+                self.aggregation = nn.Sequential(L2Norm(),
+                                                 torch.nn.AdaptiveAvgPool2d(1),
+                                                 Flatten())
+            elif args.layer == "net":
+                self.aggregation = NetVLAD(args.clusters)
+            elif args.layer == "gem":
+                self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
+        else:
+            # Redundant, however, may be useful if we were to change the aggregation method for obtaining centroids, if not found just refactor
+            self.aggregation = nn.Sequential(\
+                # L2Norm(),
+                torch.nn.AdaptiveAvgPool2d(1),
+                Flatten())
 
     def forward(self, x):
         x = self.backbone(x)
@@ -80,6 +93,25 @@ class NetVLAD(nn.Module):
         self.conv = nn.Conv2d(self.dim, num_clusters, kernel_size=(1, 1))
         # cluster centers are also learnable parameters (initialized randomly)
         self.centroids = nn.Parameter(torch.rand(num_clusters, self.dim))
+
+    def init_params(self, clusters: np.ndarray, traindescs: np.ndarray):
+
+        knn = NearestNeighbors(n_jobs=-1)  # TODO faiss?
+        knn.fit(traindescs)
+        del traindescs
+        dsSq = np.square(knn.kneighbors(clusters, 2)[0])
+        del knn
+        # Appendix A, the ratio of the best and second best soft assignments must be around 100
+        self.alpha = (-np.log(0.01) / np.mean(dsSq[:, 1] - dsSq[:, 0])).item()
+        self.centroids = nn.Parameter(torch.from_numpy(clusters))
+        del clusters, dsSq
+
+        self.conv.weight = nn.Parameter(
+            (2.0 * self.alpha * self.centroids).unsqueeze(-1).unsqueeze(-1)
+        )
+        self.conv.bias = nn.Parameter(
+            - self.alpha * self.centroids.norm(dim=1)
+        )
 
     def forward(self, x):
         N, C = x.shape[:2]
