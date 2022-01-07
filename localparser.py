@@ -62,7 +62,13 @@ def parse_arguments():
                         help="Exponent of GeM pooling")
     parser.add_argument("--minval", type=float, default=1e-6, 
                         help="Miniminal value that is allowed in order to avoid computation skewing (i.e: dividing by zero)")
-
+    
+    parser.add_argument("--optim", type=str, default="ADAM", choices=["ADAM", "SGD"])
+    
+    #%% Optimizer arguments
+    parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay for SGD.')
+    parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
+    
     args = parser.parse_args()
 
     if args.queries_per_epoch % args.cache_refresh_rate != 0:
