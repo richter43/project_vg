@@ -165,9 +165,9 @@ for epoch_num in range(args.epochs_num):
                                  drop_last=True)
         
 
-        if epoch_num < starting_epoch:
-            #when True we're just iterating through dataloader, no need to do anything further and/or train model
-            continue
+        # if epoch_num < starting_epoch:
+        #     #when True we're just iterating through dataloader, no need to do anything further and/or train model
+        #     continue
         
         model = model.train()
         
@@ -204,9 +204,11 @@ for epoch_num in range(args.epochs_num):
         logging.debug(f"Epoch[{epoch_num:02d}]({loop_num}/{loops_num}): " +
                         f"current batch triplet loss = {batch_loss:.4f}, " +
                         f"average epoch triplet loss = {epoch_losses.mean():.4f}")
-    if epoch_num < starting_epoch:
-        #we're iterating through dataloader, no need to compute recalls (most likely they're in the log files for the given epoch_num)
-        continue
+        
+    # if epoch_num < starting_epoch:
+    #     #we're iterating through dataloader, no need to compute recalls (most likely they're in the log files for the given epoch_num)
+    #     continue
+
     logging.info(f"Finished epoch {epoch_num:02d} in {str(datetime.now() - epoch_start_time)[:-7]}, "
                 f"average epoch triplet loss = {epoch_losses.mean():.4f}")
     
