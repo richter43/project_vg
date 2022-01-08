@@ -85,6 +85,8 @@ if exists(args.ancillaries_file) and args.layer == "net" and args.load_from == "
     ancillaries = torch.load(args.ancillaries_file)
     centroids = ancillaries["centroids"]
     traindesc = ancillaries["traindesc"]
+    
+    model.aggregation.init_params(centroids, traindesc)
 
 # Loading pre-trained state dicts
 if args.load_from != "":
@@ -93,8 +95,6 @@ if args.load_from != "":
     args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
     model.load_state_dict(args.checkpoint['model_state_dict'])
 
-
-    model.aggregation.init_params(centroids, traindesc)
 
 model = model.to(args.device)
 
