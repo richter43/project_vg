@@ -79,17 +79,20 @@ logging.info(f"Test set: {test_ds}")
 
 # %% Initialize model
 model = network.GeoLocalizationNet(args)
+
+# Loading initial cluster values
+if exists(args.ancillaries_file) and args.layer == "net" and args.load_from == "":
+    ancillaries = torch.load(args.ancillaries_file)
+    centroids = ancillaries["centroids"]
+    traindesc = ancillaries["traindesc"]
+
 # Loading pre-trained state dicts
 if args.load_from != "":
     logging.info(f"Loading previous model from cloud")
     util.init_tmp_dir(args)
     args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
     model.load_state_dict(args.checkpoint['model_state_dict'])
-# Loading initial cluster values
-if exists(args.ancillaries_file) and args.layer == "net":
-    ancillaries = torch.load(args.ancillaries_file)
-    centroids = ancillaries["centroids"]
-    traindesc = ancillaries["traindesc"]
+
 
     model.aggregation.init_params(centroids, traindesc)
 
