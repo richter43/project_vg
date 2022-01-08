@@ -9,6 +9,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data.dataloader import DataLoader
 from torch import nn
+import pickle
 
 
 import localparser as parser
@@ -64,11 +65,6 @@ logging.info(
 
 logging.debug(f"Loading dataset Pitts30k from folder {args.datasets_folder}")
 
-triplets_ds = datasets_ws.TripletsDataset(
-    args, args.datasets_folder, args.dataset, "train", args.negs_num_per_query)
-
-logging.info(f"Train query set: {triplets_ds}")
-
 val_ds = datasets_ws.BaseDataset(
     args, args.datasets_folder, args.dataset, "val")
 logging.info(f"Val set: {val_ds}")
@@ -94,7 +90,8 @@ if args.load_from != "":
     util.init_tmp_dir(args)
     args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
     model.load_state_dict(args.checkpoint['model_state_dict'])
-
+    
+    
 
 model = model.to(args.device)
 
@@ -122,12 +119,20 @@ if args.load_from != "":
     not_improved_num = args.checkpoint['not_improved_num']
     args.lr = args.checkpoint['lr']
     args.train_positives_dist_threshold = args.checkpoint['train_positives_dist_threshold']
-
-
-
+    # Added loading serialized contents of the data object
+    triplets_ds = pickle.loads(args.checkpoint['ds_state']) #TODO: May need to change the location of the files
+else:
+    triplets_ds = datasets_ws.TripletsDataset(
+        args, args.datasets_folder, args.dataset, "train", args.negs_num_per_query)
+    
+logging.info(f"Train query set: {triplets_ds}")
+    
+    
 logging.info(f"Output dimension of the model is {args.features_dim}")
 
 if starting_epoch != 0:
+    #Restoring numpy random state
+    np.random.set_state(args.checkpoint['np_random_state'])
     logging.info(f"starting epoch is not zero, iterating through dataloader")
 
 # %% Training loop
@@ -147,7 +152,6 @@ for epoch_num in range(args.epochs_num):
         logging.debug(f"Cache: {loop_num} / {loops_num}")
 
         
-
         # Compute triplets to use in the triplet loss
         triplets_ds.is_inference = True
         triplets_ds.compute_triplets(args, model)
@@ -159,11 +163,14 @@ for epoch_num in range(args.epochs_num):
                                  collate_fn=datasets_ws.collate_fn,
                                  pin_memory=(args.device == "cuda"),
                                  drop_last=True)
+        
 
-        model = model.train()
         if epoch_num < starting_epoch:
             #when True we're just iterating through dataloader, no need to do anything further and/or train model
             continue
+        
+        model = model.train()
+        
         # images shape: (train_batch_size*12)*3*H*W ; by default train_batch_size=4, H=480, W=640
         # triplets_local_indexes shape: (train_batch_size*10)*3 ; because 10 triplets per query
         for images, triplets_local_indexes, _ in tqdm(triplets_dl, ncols=100):
@@ -210,10 +217,11 @@ for epoch_num in range(args.epochs_num):
     is_best = recalls[1] > best_r5
 
     # Save checkpoint, which contains all training parameters
+    ## np_random_state, used for restoring the numpy random state, preserves determinism
     util.save_checkpoint(args, {"epoch_num": epoch_num, "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(), "recalls": recalls, "best_r5": best_r5,
-                        "not_improved_num": not_improved_num, "lr" : args.lr, "train_positives_dist_threshold": args.train_positives_dist_threshold
-                        }, is_best, filename="last_model.pth")
+                        "optimizer_state_dict": optimizer.state_dict(), "recalls": recalls, "best_r5": recalls[1] if is_best else best_r5,
+                        "not_improved_num": not_improved_num, "lr" : args.lr, "train_positives_dist_threshold": args.train_positives_dist_threshold,
+                        "np_random_state": np.random.get_state(), "ds_state": pickle.dumps(triplets_ds)}, is_best, filename="last_model.pth")
 
     if args.use_mega == "y":
         #upload to mega. Done on a different thread. I'm assuming this is a much faster operation than a training epoch
