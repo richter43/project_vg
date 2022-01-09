@@ -36,7 +36,8 @@ base_transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-aug_tranform = transforms.Compose([
+aug_transform = transforms.Compose([
+    transforms.RandomCrop(128),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225]),
@@ -82,6 +83,11 @@ class BaseDataset(data.Dataset):
         self.dataset_name = dataset_name
         self.dataset_folder = join(
             datasets_folder, dataset_name, "images", split)
+        self.split = split
+        
+        # Adding the data augmentation boolean
+        self.data_aug = True if args.data_aug == 'y' else False
+        
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(
                 f"Folder {self.dataset_folder} does not exist")
@@ -200,15 +206,26 @@ class TripletsDataset(BaseDataset):
         # The following commands take the indexes of the respective image,
         # reads from disk, transforms to tensor and normalizes according to Imagenet
         # parameters
-
-        query = base_transform(path_to_pil_img(
-            self.queries_paths[query_index]))
-
-        positive = base_transform(path_to_pil_img(
-            self.database_paths[best_positive_index]))
-
-        negatives = [base_transform(path_to_pil_img(
-            self.database_paths[i])) for i in neg_indexes]
+        
+        # It also augments the dataset if chosen to do so
+        if self.split == "train" and self.data_aug:
+            query = aug_transform(path_to_pil_img(
+                self.queries_paths[query_index]))
+    
+            positive = aug_transform(path_to_pil_img(
+                self.database_paths[best_positive_index]))
+    
+            negatives = [aug_transform(path_to_pil_img(
+                self.database_paths[i])) for i in neg_indexes]
+        else:
+            query = base_transform(path_to_pil_img(
+                self.queries_paths[query_index]))
+    
+            positive = base_transform(path_to_pil_img(
+                self.database_paths[best_positive_index]))
+    
+            negatives = [base_transform(path_to_pil_img(
+                self.database_paths[i])) for i in neg_indexes]
 
         # Stacking actual images' data into a tensor
         images = torch.stack((query, positive, *negatives), 0)

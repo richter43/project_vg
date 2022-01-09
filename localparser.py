@@ -82,6 +82,9 @@ def parse_arguments():
     #%% Optimizer arguments
     parser.add_argument('--weight_decay', type=float, default=0, help='Weight decay for SGD.')
     parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
+    
+    #%% Data augmentation arguments
+    parser.add_argument("--data_aug", type=str, default='n', help='Tells whether to use the data augmentation scheme or not')
 
     args = parser.parse_args()
 
