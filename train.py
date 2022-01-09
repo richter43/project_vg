@@ -136,13 +136,14 @@ if starting_epoch != 0:
     logging.info(f"starting epoch is not zero, iterating through dataloader")
 
 # %% Training loop
-for epoch_num in range(args.epochs_num):
+for epoch_num in range(starting_epoch, args.epochs_num):
     #skipping epochs when resuming: we still need to iterate through the dataloader, otherwise when resuming
     #we will train with the same data we used during the very first training session
-    if epoch_num>=starting_epoch:
-        logging.info(f"Start training epoch: {epoch_num:02d}")
-    else:
-        logging.info(f"database iteration is {epoch_num}")
+    # if epoch_num>=starting_epoch:
+    #     logging.info(f"Start training epoch: {epoch_num:02d}")
+    # else:
+    #     logging.info(f"database iteration is {epoch_num}")
+    logging.info(f"Start training epoch: {epoch_num:02d}")
     epoch_start_time = datetime.now()
     epoch_losses = np.zeros((0, 1), dtype=np.float32)
 
