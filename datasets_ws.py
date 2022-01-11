@@ -45,14 +45,15 @@ hflip_t = transforms.RandomHorizontalFlip(p = 1)
 rp_t = transforms.RandomPerspective(p = 1, distortion_scale = 0.5)
 rot_t = transforms.RandomRotation(degrees = 90)
 rndcrop_t = transforms.RandomCrop(128)
+resize_t = transforms.Resize(size = (480,640))
 
 aug_transformations = {
     "CS-HF": transforms.Compose([contrast_t, saturation_t, hflip_t]),
     "H-RP": transforms.Compose([hue_t, rp_t]),
-    "B-GS-R": transforms.Compose([bright_t, gs_t, rot_t])
-    "RC": transforms.Compose([rndcrop_t])
-    "GS": transforms.Compose([gs_t])
-    "F-R": transforms.Compose([hflip_t, rot_t])
+    "B-GS-R": transforms.Compose([bright_t, gs_t, rot_t]),
+    "RC": transforms.Compose([rndcrop_t, resize_t]),
+    "GS": transforms.Compose([gs_t]),
+    "F-R": transforms.Compose([hflip_t, rot_t]),
     "n": None
     }
 
