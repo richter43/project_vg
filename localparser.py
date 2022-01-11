@@ -84,7 +84,7 @@ def parse_arguments():
     parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
     
     #%% Data augmentation arguments
-    parser.add_argument("--data_aug", type=str, default='n', choices=["n", "rndcrop", ""], 
+    parser.add_argument("--data_aug", type=str, default='n', choices=["n", "RC", "GS", "F-R", "B-GS-R", "H-RP", "CS-HF"], 
                         help='Tells whether to use the data augmentation scheme or not and which one')
     parser.add_argument("--aug_prob", type = float, default = 0.5, help = "Probability to apply augmentation to images during training")
     args = parser.parse_args()

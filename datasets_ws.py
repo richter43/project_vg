@@ -116,7 +116,7 @@ class BaseDataset(data.Dataset):
 ])
 
         # Adding the data augmentation boolean
-        self.data_aug = True if args.data_aug == 'y' else False
+        self.data_aug = False if args.data_aug == 'n' else True
         
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(
