@@ -22,8 +22,9 @@ def upload_checkpoint(args, is_best):
         curr = files[key]
         #don't overwrite best model
         if curr['a']['n'] != "best_model.pth" or is_best:
-            args.m.destroy(curr['h'])
             args.m.upload(join(args.output_folder, curr['a']['n']), args.mega_folder[0])
+            args.m.destroy(curr['h'])
+            
     #if folder was empty, populate it
     if i == 0:
         args.m.upload(join(args.output_folder, "debug.log"), args.mega_folder[0])
@@ -44,8 +45,9 @@ def upload_from_local(src_folder, dest_folder, is_best, mega_username = "c.blang
         curr = files[key]
         #don't overwrite best model
         if curr['a']['n'] != "best_model.pth" or is_best:
+            m.upload(join(src_folder, curr['a']['n']), mega_folder[0])
             m.destroy(curr['h'])
-            m.upload(join(args.output_folder, curr['a']['n']), mega_folder[0])
+            
     #if folder was empty, populate it
     if i == 0:
         m.upload(join(src_folder, "debug.log"), mega_folder[0])
