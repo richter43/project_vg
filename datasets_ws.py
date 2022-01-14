@@ -36,13 +36,36 @@ base_transform = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
+bright_t = transforms.ColorJitter(brightness=[1,2])
+contrast_t = transforms.ColorJitter(contrast = [2,5])
+saturation_t = transforms.ColorJitter(saturation = [1,3])
+hue_t = transforms.ColorJitter(hue = 0.2)
+gs_t = transforms.Grayscale(3)
+hflip_t = transforms.RandomHorizontalFlip(p = 1)
+rp_t = transforms.RandomPerspective(p = 1, distortion_scale = 0.5)
+rot_t = transforms.RandomRotation(degrees = 90)
+rndcrop_t = transforms.RandomCrop(128)
+resize_t = transforms.Resize(size = (480,640))
+
+aug_transformations = {
+    "CS-HF": transforms.Compose([contrast_t, saturation_t, hflip_t]),
+    "H-RP": transforms.Compose([hue_t, rp_t]),
+    "B-GS-R": transforms.Compose([bright_t, gs_t, rot_t]),
+    "RC": transforms.Compose([rndcrop_t, resize_t]),
+    "GS": transforms.Compose([gs_t]),
+    "F-R": transforms.Compose([hflip_t, rot_t]),
+    "n": None
+    }
+
+
+"""
 aug_transform = transforms.Compose([
     transforms.RandomCrop(128),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
                          std=[0.229, 0.224, 0.225]),
 ])
-
+"""
 
 def path_to_pil_img(path):
     return Image.open(path).convert("RGB")
@@ -85,8 +108,16 @@ class BaseDataset(data.Dataset):
             datasets_folder, dataset_name, "images", split)
         self.split = split
         
+        data_transform = aug_transformations[args.data_aug]
+        self.aug_transform = transforms.Compose([
+            transforms.RandomApply([data_transform], p = args.aug_prob),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+])
+
         # Adding the data augmentation boolean
-        self.data_aug = True if args.data_aug == 'y' else False
+        self.data_aug = False if args.data_aug == 'n' else True
         
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(
@@ -191,7 +222,8 @@ class TripletsDataset(BaseDataset):
         self.queries_num = len(self.queries_paths)
 
     def __getitem__(self, index: int) -> Tuple[TripletImages, TripletLocalIndexes, TripletGlobalIndexes]:
-
+        
+        aug_transform = self.aug_transform
         if self.is_inference:
             # At inference time return the single image. This is used for caching
             return super().__getitem__(index)
