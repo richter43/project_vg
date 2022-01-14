@@ -93,24 +93,17 @@ class NetVLAD(nn.Module):
         # cluster centers are also learnable parameters (initialized randomly)
         self.centroids = nn.Parameter(torch.rand(num_clusters, self.dim))
 
-    def init_params(self, clusters: np.ndarray, traindescs: np.ndarray):
+    def init_params(self, clsts: np.ndarray, traindescs: np.ndarray):
 
-        knn = NearestNeighbors(n_jobs=-1)  # TODO faiss?
-        knn.fit(traindescs)
-        del traindescs
-        dsSq = np.square(knn.kneighbors(clusters, 2)[0])
-        del knn
-        # Appendix A, the ratio of the best and second best soft assignments must be around 100
-        self.alpha = (-np.log(0.01) / np.mean(dsSq[:, 1] - dsSq[:, 0])).item()
-        self.centroids = nn.Parameter(torch.from_numpy(clusters))
-        del clusters, dsSq
+        clstsAssign = clsts / np.linalg.norm(clsts, axis=1, keepdims=True)
+        dots = np.dot(clstsAssign, traindescs.T)
+        dots.sort(0)
+        dots = dots[::-1, :] # sort, descending
 
-        self.conv.weight = nn.Parameter(
-            (2.0 * self.alpha * self.centroids).unsqueeze(-1).unsqueeze(-1)
-        )
-        self.conv.bias = nn.Parameter(
-            - self.alpha * self.centroids.norm(dim=1)
-        )
+        self.alpha = (-np.log(0.01) / np.mean(dots[0,:] - dots[1,:])).item()
+        self.centroids = nn.Parameter(torch.from_numpy(clsts))
+        self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha*clstsAssign).unsqueeze(2).unsqueeze(3))
+        self.conv.bias = None
 
     def forward(self, x):
         N, C = x.shape[:2]
