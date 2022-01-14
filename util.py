@@ -86,6 +86,7 @@ def MyFind(m, filename):
                 parentid = curr['h']
                 target = curr
                 break
-
+    if curr['a']['n'] != folders[len(folders)-1]:
+      return None
     return (target['h'], target)
     
