@@ -22,8 +22,9 @@ def upload_checkpoint(args, is_best):
         curr = files[key]
         #don't overwrite best model
         if curr['a']['n'] != "best_model.pth" or is_best:
-            args.m.destroy(curr['h'])
             args.m.upload(join(args.output_folder, curr['a']['n']), args.mega_folder[0])
+            args.m.destroy(curr['h'])
+            
     #if folder was empty, populate it
     if i == 0:
         args.m.upload(join(args.output_folder, "debug.log"), args.mega_folder[0])
@@ -31,6 +32,29 @@ def upload_checkpoint(args, is_best):
         args.m.upload(join(args.output_folder, "last_model.pth"), args.mega_folder[0])
         if is_best:
             args.m.upload(join(args.output_folder, "best_model.pth"), args.mega_folder[0])
+
+def upload_from_local(src_folder, dest_folder, is_best, mega_username = "c.blangio@gmail.com"):
+    mega = Mega()
+    pwd = getpass.getpass(f"insert password for mega account ({mega_username}):")
+    m = mega.login(mega_username, pwd)
+    mega_folder = MyFind(m, dest_folder)
+    files = m.get_files_in_node(mega_folder[0]) #this is a dictionary
+    i=0
+    for key in files:
+        i+=1
+        curr = files[key]
+        #don't overwrite best model
+        if curr['a']['n'] != "best_model.pth" or is_best:
+            m.upload(join(src_folder, curr['a']['n']), mega_folder[0])
+            m.destroy(curr['h'])
+            
+    #if folder was empty, populate it
+    if i == 0:
+        m.upload(join(src_folder, "debug.log"), mega_folder[0])
+        m.upload(join(src_folder, "info.log"), mega_folder[0])
+        m.upload(join(src_folder, "last_model.pth"), mega_folder[0])
+        if is_best:
+            m.upload(join(src_folder, "best_model.pth"), mega_folder[0])
 
 def init_mega(args):
     mega = Mega()
@@ -62,6 +86,7 @@ def MyFind(m, filename):
                 parentid = curr['h']
                 target = curr
                 break
-
+    if curr['a']['n'] != folders[len(folders)-1]:
+      return None
     return (target['h'], target)
     
