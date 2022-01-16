@@ -46,6 +46,8 @@ rp_t = transforms.RandomPerspective(p = 1, distortion_scale = 0.5)
 rot_t = transforms.RandomRotation(degrees = 90)
 rndcrop_t = transforms.RandomCrop(128)
 resize_t = transforms.Resize(size = (480,640))
+res_increase_t = transforms.Resize(size = (600,800))
+res_decrease_t = transforms.Resize(size = (360, 480))
 
 aug_transformations = {
     "CS-HF": transforms.Compose([contrast_t, saturation_t, hflip_t]),
@@ -54,6 +56,9 @@ aug_transformations = {
     "RC": transforms.Compose([rndcrop_t, resize_t]),
     "GS": transforms.Compose([gs_t]),
     "F-R": transforms.Compose([hflip_t, rot_t]),
+    "R-I": transforms.Compose([res_increase_t]),
+    "R-D": transforms.Compose([res_decrease_t]),
+    "B-H": transforms.Compose([bright_t, hue_t]),
     "n": None
     }
 
