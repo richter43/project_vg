@@ -86,6 +86,8 @@ if exists(args.ancillaries_file) and args.layer == "net" and args.load_from == "
 
 # Loading pre-trained state dicts
 if args.load_from != "":
+    if args.layer == "net":
+        model.aggregation.conv.bias = None
     logging.info(f"Loading previous model from cloud")
     util.init_tmp_dir(args)
     args.checkpoint = torch.load(join(args.output_folder, "last_model.pth"))
@@ -121,8 +123,6 @@ if args.load_from != "":
     args.train_positives_dist_threshold = args.checkpoint['train_positives_dist_threshold']
     # Added loading serialized contents of the data object
     triplets_ds = pickle.loads(args.checkpoint['ds_state']) #TODO: May need to change the location of the files
-    if args.layer == "net":
-        model.aggregation.conv.bias = None
 else:
     triplets_ds = datasets_ws.TripletsDataset(
         args, args.datasets_folder, args.dataset, "train", args.negs_num_per_query)
