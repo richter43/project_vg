@@ -98,6 +98,10 @@ if __name__ == "__main__":
     
     # %% Initialize model
     model = network.GeoLocalizationNet(args)
+    
+    if args.layer == "net":
+        model.aggregation.conv.bias = None
+    
     # Loading pre-trained state dicts
     if args.load_from != "":
         logging.info(f"Loading previous model from cloud")
