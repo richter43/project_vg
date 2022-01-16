@@ -121,6 +121,8 @@ if args.load_from != "":
     args.train_positives_dist_threshold = args.checkpoint['train_positives_dist_threshold']
     # Added loading serialized contents of the data object
     triplets_ds = pickle.loads(args.checkpoint['ds_state']) #TODO: May need to change the location of the files
+    if args.layer == "net":
+        model.aggregation.conv.bias = None
 else:
     triplets_ds = datasets_ws.TripletsDataset(
         args, args.datasets_folder, args.dataset, "train", args.negs_num_per_query)
