@@ -13,6 +13,8 @@ import datasets_ws
 import network
 import multiprocessing
 from os.path import join,exists
+from datasets_ws import aug_transformations
+
 def test(args, eval_ds, model):
     """Compute features of the given dataset and compute the recalls."""
     model = model.eval()
@@ -25,6 +27,9 @@ def test(args, eval_ds, model):
         
         all_features = np.empty((len(eval_ds), args.features_dim), dtype="float32")
         for inputs, indices in tqdm(database_dataloader, ncols=100):
+            inputs = inputs.to(args.device)
+            if args.data_aug == "R-I" or args.data_aug == "R-D":
+              inputs = aug_transformations[args.data_aug](inputs)
             features = model(inputs.to(args.device))
             features = features.cpu().numpy()
             all_features[indices.numpy(), :] = features
