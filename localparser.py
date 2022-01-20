@@ -49,7 +49,7 @@ def parse_arguments():
     
     # Layer to be used and related parameters
     # %% New arguments
-    parser.add_argument("--layer", type=str, default="avg", choices=["avg", "net", "gem"],
+    parser.add_argument("--layer", type=str, default="avg", choices=["avg", "net", "gem", "solar"],
                         help="Model frontend used (E.g: \"avg\", \"net\")")
 
     parser.add_argument("--load_from", type = str, default = "", 
