@@ -178,6 +178,29 @@ class SOA(nn.Module):
 
         self.v.apply(constant_init)
 
+    def forward(self, x, vis_mode=False):
+        B, C, H, W = x.shape
+
+        f_x = self.f(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+        g_x = self.g(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+        h_x = self.h(x).view(B, self.mid_ch, H * W)  # B * mid_ch * N, where N = H*W
+
+        z = torch.bmm(f_x.permute(0, 2, 1), g_x)  # B * N * N, where N = H*W
+
+        if vis_mode:
+            # for visualisation only
+            attn = self.softmax((self.mid_ch ** -.75) * z)
+        else:
+            attn = self.softmax((self.mid_ch ** -.50) * z)
+
+        z = torch.bmm(attn, h_x.permute(0, 2, 1))  # B * N * mid_ch, where N = H*W
+        z = z.permute(0, 2, 1).view(B, self.mid_ch, H, W)  # B * mid_ch * H * W
+
+        z = self.v(z)
+        z = z + x
+
+        return z, attn
+
 
 def weights_init(module):
 
