@@ -153,11 +153,12 @@ class GeM(nn.Module):
 
 class SOA(nn.Module):
 
-    def __init__(self, args):
+    def __init__(self, in_ch, k):
         super().__init__()
 
-        self.in_ch = args.solar_in_ch
-        self.k = args.solar_k
+        self.in_ch = in_ch
+        self.out_ch = in_ch
+        self.mid_ch = in_ch // k
 
         self.f = nn.Sequential(
             nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)),
