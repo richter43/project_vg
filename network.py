@@ -151,7 +151,7 @@ class GeM(nn.Module):
 # The following lines of code were obtained from https://github.com/tonyngjichun/SOLAR
 
 
-class SOA(nn.module):
+class SOA(nn.Module):
 
     def __init__(self, args):
         super().__init__()
@@ -199,7 +199,7 @@ def constant_init(module):
     elif isinstance(module, nn.BatchNorm2d):
         pass
 
-class GeoLocalizationNetSOA(nn.module):
+class GeoLocalizationNetSOA(nn.Module):
     def __init__(self, args):
         super().__init__()
 
