@@ -18,6 +18,7 @@ class GeoLocalizationNet(nn.Module):
 
     def __init__(self, args: Namespace, cluster: bool = False):
         super().__init__()
+
         self.backbone = get_backbone(args)        
         if not cluster:
             if args.layer == "avg":
@@ -55,7 +56,7 @@ def get_backbone(args):
     backbone = torch.nn.Sequential(*layers)
 
     # features_dim is used in datasets_ws.compute_cache to build a cache of proper size. Not modifying it to fit current output leads to error
-    if args.layer == "avg" or args.layer == "gem":
+    if args.layer == "avg" or args.layer == "gem" or args.layer == "solar":
         args.features_dim = 256  # Number of channels in conv4
     elif args.layer == "net":
         args.features_dim = (
@@ -146,3 +147,84 @@ class GeM(nn.Module):
         return F.avg_pool2d(
             x.clamp(min=self.minval).pow(self.pk), (x.size(-2), x.size(-1))
         ).pow(1.0 / self.pk)
+
+# The following lines of code were obtained from https://github.com/tonyngjichun/SOLAR
+
+
+class SOA(nn.module):
+
+    def __init__(self, args):
+        super().__init__()
+
+        self.in_ch = args.solar_in_ch
+        self.k = args.solar_k
+
+        self.f = nn.Sequential(
+            nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)),
+            nn.BatchNorm2d(self.mid_ch),
+            nn.ReLU())
+        self.g = nn.Sequential(
+            nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1)),
+            nn.BatchNorm2d(self.mid_ch),
+            nn.ReLU())
+        self.h = nn.Conv2d(self.in_ch, self.mid_ch, (1, 1), (1, 1))
+        self.v = nn.Conv2d(self.mid_ch, self.out_ch, (1, 1), (1, 1))
+
+        self.softmax = nn.Softmax(dim=-1)
+
+        for conv in [self.f, self.g, self.h]:
+            conv.apply(weights_init)
+
+        self.v.apply(constant_init)
+
+
+def weights_init(module):
+
+    if isinstance(module, nn.ReLU):
+        pass
+    if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
+        nn.init.kaiming_normal_(module.weight.data)
+        nn.init.constant_(module.bias.data, 0.0)
+    elif isinstance(module, nn.BatchNorm2d):
+        pass
+
+
+def constant_init(module):
+
+    if isinstance(module, nn.ReLU):
+        pass
+    if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
+        nn.init.constant_(module.weight.data, 0.0)
+        nn.init.constant_(module.bias.data, 0.0)
+    elif isinstance(module, nn.BatchNorm2d):
+        pass
+
+class GeoLocalizationNetSOA(nn.module):
+    def __init__(self, args):
+        super().__init__()
+
+        self.backbone = get_backbone(args)
+
+        self.resnet_fixed = self.backbone[0:6]
+        self.resnet_2 = self.backbone[6]
+
+        self.soa1 = SOA(in_ch=args.features_dim // 2, k=4)
+        self.soa2 = SOA(in_ch=args.features_dim, k=2)
+
+        self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten()) #TODO: Whitening between GeM and L2Norm
+
+
+    def forward(self, x):
+        x = self.resnet_fixed(x)
+
+        x = self.soa1(x)
+
+        x = self.resnet_2(x)
+
+        x = self.soa2(x)
+
+        x = self.gem(x)
+
+        return x
+
+

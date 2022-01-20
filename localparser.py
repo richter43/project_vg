@@ -87,8 +87,17 @@ def parse_arguments():
     parser.add_argument("--data_aug", type=str, default='n', choices=["n", "RC", "GS", "F-R", "B-GS-R", "H-RP", "CS-HF", "R-I", "R-D", "B-H"], 
                         help='Tells whether to use the data augmentation scheme or not and which one')
     parser.add_argument("--aug_prob", type = float, default = 0.5, help = "Probability to apply augmentation to images during training")
-    args = parser.parse_args()
 
+
+    #%% Solar arguments
+    parser.add_argument("--s", type=str, default='n',
+                        choices=["n", "RC", "GS", "F-R", "B-GS-R", "H-RP", "CS-HF", "R-I", "R-D", "B-H"],
+                        help='Tells whether to use the data augmentation scheme or not and which one')
+    parser.add_argument("--aug_prob", type=float, default=0.5,
+                        help="Probability to apply augmentation to images during training")
+
+
+    args = parser.parse_args()
     if args.queries_per_epoch % args.cache_refresh_rate != 0:
         raise ValueError("Ensure that queries_per_epoch is divisible by cache_refresh_rate, " +
                          f"because {args.queries_per_epoch} is not divisible by {args.cache_refresh_rate}")
