@@ -199,7 +199,7 @@ class SOA(nn.Module):
         z = self.v(z)
         z = z + x
 
-        return z, attn
+        return z
 
 
 def weights_init(module):
