@@ -66,7 +66,7 @@ def parse_arguments():
     parser.add_argument("--num_clusters", type =int, default = 64, 
                         help = "Number of clusters used in the NetVLAD layer")
     parser.add_argument("--clusters", default=64, type=int,
-                        help="Number of cluster centers to compute")
+       help="Number of cluster centers to compute")
     parser.add_argument("--dataset", type=str, required=True,
                         help="Chosen dataset",
                         choices=["pitts30k", "st_lucia"])
@@ -90,11 +90,6 @@ def parse_arguments():
 
 
     #%% Solar arguments
-    parser.add_argument("--s", type=str, default='n',
-                        choices=["n", "RC", "GS", "F-R", "B-GS-R", "H-RP", "CS-HF", "R-I", "R-D", "B-H"],
-                        help='Tells whether to use the data augmentation scheme or not and which one')
-    parser.add_argument("--aug_prob", type=float, default=0.5,
-                        help="Probability to apply augmentation to images during training")
 
 
     args = parser.parse_args()
