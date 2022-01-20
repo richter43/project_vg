@@ -90,7 +90,7 @@ def parse_arguments():
 
 
     #%% Solar arguments
-
+    parser.add_argument("--sos_lambda", type = int, default= 10, help= "Parameter for sos loss")
 
     args = parser.parse_args()
     if args.queries_per_epoch % args.cache_refresh_rate != 0:

@@ -1,3 +1,4 @@
+from turtle import pos
 import torch
 import logging
 import torchvision
@@ -251,4 +252,33 @@ class GeoLocalizationNetSOA(nn.Module):
 
         return x
 
+def fos_triplet_loss(query,positives,negatives, margin=0.1):
+    # x is D x N
+    #dim = query.size(0) # D
+    nq = query.size(1) # number of tuples
+    #S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
+
+    xa = query #.permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
+    xp = positives #.permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
+    xn = negatives
+
+    dist_pos = torch.sum(torch.pow(xa - xp, 2), dim=0)
+    dist_neg = torch.sum(torch.pow(xa - xn, 2), dim=0)
+
+    return torch.sum(torch.clamp(dist_pos - dist_neg + margin, min=0)) / nq
+  
+def sos_loss(query,positives, negatives):
+    # x is D x N
+    #dim = query.size(1) # D
+    nq = query.size(0) # number of tuples
+    #S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
+
+    xa = query
+    xp = positives
+    xn = negatives
+
+    dist_an = torch.sum(torch.pow(xa - xn, 2), dim=0)
+    dist_pn = torch.sum(torch.pow(xp - xn, 2), dim=0)
+
+    return torch.sum(torch.pow(dist_an - dist_pn, 2)) ** 0.5 / nq
 
