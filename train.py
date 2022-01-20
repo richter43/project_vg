@@ -74,7 +74,10 @@ test_ds = datasets_ws.BaseDataset(
 logging.info(f"Test set: {test_ds}")
 
 # %% Initialize model
-model = network.GeoLocalizationNet(args)
+if args.layer == "solar":
+    model = network.GeoLocalizationNetSOA(args)
+else:
+    model = network.GeoLocalizationNet(args)
 
 # Loading initial cluster values
 if exists(args.ancillaries_file) and args.layer == "net" and args.load_from == "":
