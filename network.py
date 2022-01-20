@@ -223,7 +223,7 @@ class GeoLocalizationNetSOA(nn.Module):
 
         x = self.soa2(x)
 
-        x = self.gem(x)
+        x = self.aggregation(x)
 
         return x
 
