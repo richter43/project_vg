@@ -20,7 +20,7 @@ class GeoLocalizationNet(nn.Module):
     def __init__(self, args: Namespace, cluster: bool = False):
         super().__init__()
 
-        self.backbone = get_backbone(args)        
+        self.backbone = get_backbone(args)
         if not cluster:
             if args.layer == "avg":
                 self.aggregation = nn.Sequential(L2Norm(),
@@ -32,7 +32,7 @@ class GeoLocalizationNet(nn.Module):
                 self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
         else:
             # Redundant, however, may be useful if we were to change the aggregation method for obtaining centroids, if not found just refactor
-            self.aggregation = nn.Sequential(\
+            self.aggregation = nn.Sequential( \
                 # L2Norm(),
                 torch.nn.AdaptiveAvgPool2d(1),
                 Flatten())
@@ -61,7 +61,7 @@ def get_backbone(args):
         args.features_dim = 256  # Number of channels in conv4
     elif args.layer == "net":
         args.features_dim = (
-            256 * args.num_clusters
+                256 * args.num_clusters
         )  # NetVLAD should output a KxDx1 (?), with K = num_clusters and D = features of local descriptor xi
     return backbone
 
@@ -96,15 +96,14 @@ class NetVLAD(nn.Module):
         self.centroids = nn.Parameter(torch.rand(num_clusters, self.dim))
 
     def init_params(self, clsts: np.ndarray, traindescs: np.ndarray):
-
         clstsAssign = clsts / np.linalg.norm(clsts, axis=1, keepdims=True)
         dots = np.dot(clstsAssign, traindescs.T)
         dots.sort(0)
-        dots = dots[::-1, :] # sort, descending
+        dots = dots[::-1, :]  # sort, descending
 
-        self.alpha = (-np.log(0.01) / np.mean(dots[0,:] - dots[1,:])).item()
+        self.alpha = (-np.log(0.01) / np.mean(dots[0, :] - dots[1, :])).item()
         self.centroids = nn.Parameter(torch.from_numpy(clsts))
-        self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha*clstsAssign).unsqueeze(2).unsqueeze(3))
+        self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha * clstsAssign).unsqueeze(2).unsqueeze(3))
         self.conv.bias = None
 
     def forward(self, x):
@@ -123,13 +122,15 @@ class NetVLAD(nn.Module):
             [N, self.num_clusters, C], dtype=x.dtype, layout=x.layout, device=x.device
         )
         for C in range(
-            self.num_clusters
+                self.num_clusters
         ):  # slower than non-looped, but lower memory usage
             residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - self.centroids[
-                C : C + 1, :
-            ].expand(x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
-            residual *= soft_assign[:, C : C + 1, :].unsqueeze(2)
-            vlad[:, C : C + 1, :] = residual.sum(dim=-1)
+                                                                    C: C + 1, :
+                                                                    ].expand(x_flatten.size(-1), -1, -1).permute(1, 2,
+                                                                                                                 0).unsqueeze(
+                0)
+            residual *= soft_assign[:, C: C + 1, :].unsqueeze(2)
+            vlad[:, C: C + 1, :] = residual.sum(dim=-1)
 
         vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
         vlad = vlad.view(x.size(0), -1)  # flatten
@@ -148,6 +149,7 @@ class GeM(nn.Module):
         return F.avg_pool2d(
             x.clamp(min=self.minval).pow(self.pk), (x.size(-2), x.size(-1))
         ).pow(1.0 / self.pk)
+
 
 # The following lines of code were obtained from https://github.com/tonyngjichun/SOLAR
 
@@ -204,7 +206,6 @@ class SOA(nn.Module):
 
 
 def weights_init(module):
-
     if isinstance(module, nn.ReLU):
         pass
     if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
@@ -215,7 +216,6 @@ def weights_init(module):
 
 
 def constant_init(module):
-
     if isinstance(module, nn.ReLU):
         pass
     if isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d):
@@ -223,6 +223,24 @@ def constant_init(module):
         nn.init.constant_(module.bias.data, 0.0)
     elif isinstance(module, nn.BatchNorm2d):
         pass
+
+
+class LocalWhitening(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        x_tmp = x[:, :, 0, 0]  # Making the input a 2D matrix
+        x_tmp = F.normalize(x_tmp)  # Normalizing the input
+        cov = torch.mm(x_tmp, x_tmp.t())  # Computing the covariance matrix
+        evalue, evec = torch.eig(cov, eigenvectors=True)  # Computing the eigenvalues and eigenvectors
+        lambda_rsqrt = torch.rsqrt(evalue[:, 0])
+        lambda_rsqrt = torch.diag(lambda_rsqrt)
+        res = evec @ lambda_rsqrt @ evec.t()  # ZCA Whitening
+        y = res @ x_tmp
+
+        return y.unsqueeze(-1).unsqueeze(-1)
+
 
 class GeoLocalizationNetSOA(nn.Module):
     def __init__(self, args):
@@ -236,8 +254,10 @@ class GeoLocalizationNetSOA(nn.Module):
         self.soa1 = SOA(in_ch=args.features_dim // 2, k=4)
         self.soa2 = SOA(in_ch=args.features_dim, k=2)
 
-        self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten()) #TODO: Whitening between GeM and L2Norm
+        self.gem = GeM(args)
+        self.whiten = nn.Linear(args.features_dim, args.features_dim, bias=True)
 
+        self.aggregation = nn.Sequential(L2Norm(), Flatten())
 
     def forward(self, x):
         x = self.resnet_fixed(x)
@@ -248,30 +268,38 @@ class GeoLocalizationNetSOA(nn.Module):
 
         x = self.soa2(x)
 
+        x = self.gem(x)
+
+        x = self.whiten(x[:, :, 0, 0])
+
+        x = x.unsqueeze(-1).unsqueeze(-1)
+
         x = self.aggregation(x)
 
         return x
 
-def fos_triplet_loss(query,positives,negatives, margin=0.1):
-    # x is D x N
-    #dim = query.size(0) # D
-    nq = query.size(1) # number of tuples
-    #S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
 
-    xa = query #.permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
-    xp = positives #.permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
+def fos_triplet_loss(query, positives, negatives, margin=0.1):
+    # x is D x N
+    # dim = query.size(0) # D
+    nq = query.size(1)  # number of tuples
+    # S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
+
+    xa = query  # .permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
+    xp = positives  # .permute(1,0).repeat(1,S-2).view((S-2)*nq,dim).permute(1,0)
     xn = negatives
 
     dist_pos = torch.sum(torch.pow(xa - xp, 2), dim=0)
     dist_neg = torch.sum(torch.pow(xa - xn, 2), dim=0)
 
     return torch.sum(torch.clamp(dist_pos - dist_neg + margin, min=0)) / nq
-  
-def sos_loss(query,positives, negatives):
+
+
+def sos_loss(query, positives, negatives):
     # x is D x N
-    #dim = query.size(1) # D
-    nq = query.size(0) # number of tuples
-    #S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
+    # dim = query.size(1) # D
+    nq = query.size(0)  # number of tuples
+    # S = 1+1+negatives.size(1) // nq # number of images per tuple including query: 1+1+n
 
     xa = query
     xp = positives
