@@ -115,13 +115,6 @@ if __name__ == "__main__":
     args.checkpoint = torch.load(join(args.output_folder, "best_model.pth"))
     model.load_state_dict(args.checkpoint['model_state_dict'])
     
-    # Loading initial cluster values
-    if exists(args.ancillaries_file) and args.layer == "net":
-        ancillaries = torch.load(args.ancillaries_file)
-        centroids = ancillaries["centroids"]
-        traindesc = ancillaries["traindesc"]
-
-        model.aggregation.init_params(centroids, traindesc)
 
     model = model.to(args.device)
     recalls, recalls_str = test(args, test_ds, model)
