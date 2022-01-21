@@ -91,6 +91,7 @@ def parse_arguments():
 
     #%% Solar arguments
     parser.add_argument("--sos_lambda", type = int, default= 10, help= "Parameter for sos loss")
+    parser.add_argument("--solar_whiten", type=str, default="n", choices=["n", "y"], help="Linear transformation equivalent of a whitening matrix (Starts with random values)")
 
     args = parser.parse_args()
     if args.queries_per_epoch % args.cache_refresh_rate != 0:

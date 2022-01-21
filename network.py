@@ -6,8 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from sklearn.neighbors import NearestNeighbors
-
 from argparse import Namespace
 
 
@@ -32,7 +30,7 @@ class GeoLocalizationNet(nn.Module):
                 self.aggregation = nn.Sequential(GeM(args), L2Norm(), Flatten())
         else:
             # Redundant, however, may be useful if we were to change the aggregation method for obtaining centroids, if not found just refactor
-            self.aggregation = nn.Sequential( \
+            self.aggregation = nn.Sequential(
                 # L2Norm(),
                 torch.nn.AdaptiveAvgPool2d(1),
                 Flatten())
@@ -225,22 +223,47 @@ def constant_init(module):
         pass
 
 
-class LocalWhitening(nn.Module):
+# class LocalWhitening(nn.Module):
+# Doesn't work because matrices might be singular
+#     def __init__(self):
+#         super().__init__()
+#
+#     def forward(self, x):
+#         x_tmp = x[:, :, 0, 0]  # Making the input a 2D matrix
+#         x_tmp = F.normalize(x_tmp)  # Normalizing the input
+#         cov = torch.mm(x_tmp, x_tmp.t())  # Computing the covariance matrix
+#         evalue, evec = torch.eig(cov, eigenvectors=True)  # Computing the eigenvalues and eigenvectors
+#         lambda_rsqrt = torch.rsqrt(evalue[:, 0])
+#         lambda_rsqrt = torch.diag(lambda_rsqrt)
+#         res = evec @ lambda_rsqrt @ evec.t()  # ZCA Whitening
+#         y = res @ x_tmp
+#
+#         return y.unsqueeze(-1).unsqueeze(-1)
+
+class SVDWhitening(nn.Module):
     def __init__(self):
         super().__init__()
 
     def forward(self, x):
-        x_tmp = x[:, :, 0, 0]  # Making the input a 2D matrix
-        x_tmp = F.normalize(x_tmp)  # Normalizing the input
+        x_tmp = F.normalize(x)  # Normalizing the input
+        # cov = torch.mm(x_tmp, x_tmp.t())  # Computing the covariance matrix
+        U, _, V = torch.svd(x_tmp)
+        y = U @ V.t()
+        return y
+
+class SVDWhiteningCov(nn.Module):
+
+
+    def __init__(self):
+            super().__init__()
+
+    def forward(self, x):
+        x_tmp = F.normalize(x)  # Normalizing the input
         cov = torch.mm(x_tmp, x_tmp.t())  # Computing the covariance matrix
-        evalue, evec = torch.eig(cov, eigenvectors=True)  # Computing the eigenvalues and eigenvectors
-        lambda_rsqrt = torch.rsqrt(evalue[:, 0])
-        lambda_rsqrt = torch.diag(lambda_rsqrt)
-        res = evec @ lambda_rsqrt @ evec.t()  # ZCA Whitening
-        y = res @ x_tmp
-
-        return y.unsqueeze(-1).unsqueeze(-1)
-
+        U, s, V = torch.svd(cov)
+        lambda_rsqrt = torch.diag(torch.rsqrt(s))
+        y = U @ lambda_rsqrt @ V.t()
+        return y @ x_tmp
 
 class GeoLocalizationNetSOA(nn.Module):
     def __init__(self, args):
@@ -255,25 +278,28 @@ class GeoLocalizationNetSOA(nn.Module):
         self.soa2 = SOA(in_ch=args.features_dim, k=2)
 
         self.gem = GeM(args)
-        self.whiten = nn.Linear(args.features_dim, args.features_dim, bias=True)
+
+        if args.solar_whiten:
+            self.whiten = nn.Linear(args.features_dim, args.features_dim, bias=True)
+        else:
+            self.whiten = None
+
+        # self.whiten = SVDWhiteningCov()
 
         self.aggregation = nn.Sequential(L2Norm(), Flatten())
 
     def forward(self, x):
-        x = self.resnet_fixed(x)
-
+        x = self.resnet_fixed(x) # First part of the Resnet-18 (Fixed weights)
+        # According to the solar paper this is the arrangement that worked best
         x = self.soa1(x)
-
         x = self.resnet_2(x)
-
         x = self.soa2(x)
 
+        #Normalization and aggregation step
         x = self.gem(x)
-
-        x = self.whiten(x[:, :, 0, 0])
-
-        x = x.unsqueeze(-1).unsqueeze(-1)
-
+        if self.whiten is not None:
+            x = self.whiten(x[:, :, 0, 0])
+            x = x.unsqueeze(-1).unsqueeze(-1)
         x = self.aggregation(x)
 
         return x
