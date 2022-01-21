@@ -185,20 +185,21 @@ for epoch_num in range(starting_epoch, args.epochs_num):
             features = model(images.to(args.device))
             # This is implicitly casted to a tensor afterwards
             loss_triplet = 0
-
+            loss_sos = 0
             # View
             triplets_local_indexes = torch.transpose(
                 triplets_local_indexes.view(args.train_batch_size, args.negs_num_per_query, 3), 1, 0)
             for triplets in triplets_local_indexes:
                 queries_indexes, positives_indexes, negatives_indexes = triplets.T
-                if args.layer != "solar":
-                    loss_triplet += criterion_triplet(features[queries_indexes],
-                                                      features[positives_indexes],
-                                                      features[negatives_indexes])
-                else:
-                    loss_triplet += criterion_triplet(features[queries_indexes],features[positives_indexes],features[negatives_indexes]) \
-                                    + args.sos_lambda*sos_loss(features[queries_indexes], features[positives_indexes], features[negatives_indexes])
-            del features    
+                
+                loss_triplet += criterion_triplet(features[queries_indexes],
+                                                  features[positives_indexes],
+                                                  features[negatives_indexes])
+                if args.layer == "solar":
+                    loss_sos +=sos_loss(features[queries_indexes], features[positives_indexes], features[negatives_indexes])
+            del features
+            if args.layer == "solar":
+              loss_triplet = loss_triplet + args.sos_lambda* torch.pow(loss_sos,0.5)
             loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
 
             # set_to_none=True local optimization does not translate to global time optimization
