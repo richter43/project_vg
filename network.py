@@ -151,7 +151,6 @@ class GeM(nn.Module):
 
 # The following lines of code were obtained from https://github.com/tonyngjichun/SOLAR
 
-
 class SOA(nn.Module):
 
     def __init__(self, in_ch, k):
@@ -279,7 +278,7 @@ class GeoLocalizationNetSOA(nn.Module):
 
         self.gem = GeM(args)
 
-        if args.solar_whiten:
+        if args.solar_whiten == "y":
             self.whiten = nn.Linear(args.features_dim, args.features_dim, bias=True)
         else:
             self.whiten = None
