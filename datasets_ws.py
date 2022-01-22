@@ -155,7 +155,10 @@ class BaseDataset(data.Dataset):
 
     def __getitem__(self, index):
         img = path_to_pil_img(self.images_paths[index])
-        img = base_transform(img)
+        if self.data_aug:
+            img = self.aug_transform(img)
+        else:
+            img = base_transform(img)
         return img, index
 
     def __len__(self):
