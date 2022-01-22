@@ -295,7 +295,7 @@ class TripletsDataset(BaseDataset):
                 images = images.to(args.device)
 
                 if args.data_aug == "R-D" or args.data_aug == "R-I":
-                    img = aug_transformations[args.data_aug](img)
+                    images = aug_transformations[args.data_aug](images)
 
                 features = model(images)
 
