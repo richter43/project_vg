@@ -278,12 +278,14 @@ class GeoLocalizationNetSOA(nn.Module):
 
         self.gem = GeM(args)
 
-        if args.solar_whiten == "y":
+        if args.solar_whiten == "linear":
             self.whiten = nn.Linear(args.features_dim, args.features_dim, bias=True)
+        elif args.solar_whiten == "svd_cov":
+            self.whiten = SVDWhiteningCov()
+        elif args.solar_whiten == "svd_matrix":
+            self.whiten = SVDWhitening()
         else:
             self.whiten = None
-
-        # self.whiten = SVDWhiteningCov()
 
         self.aggregation = nn.Sequential(L2Norm(), Flatten())
 
