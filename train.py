@@ -181,6 +181,7 @@ for epoch_num in range(starting_epoch, args.epochs_num):
         # triplets_local_indexes shape: (train_batch_size*10)*3 ; because 10 triplets per query
         for images, triplets_local_indexes, _ in tqdm(triplets_dl, ncols=100):
             # Compute features of all images (images contains queries, positives and negatives)
+            print("Not yet")
             features = model(images.to(args.device))
             # This is implicitly casted to a tensor afterwards
             loss_triplet = 0

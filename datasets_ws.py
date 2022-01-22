@@ -117,7 +117,7 @@ class BaseDataset(data.Dataset):
 
         # Adding the data augmentation boolean
         self.data_aug = False if args.data_aug == 'n' else True
-        
+
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(
                 f"Folder {self.dataset_folder} does not exist")
@@ -294,7 +294,9 @@ class TripletsDataset(BaseDataset):
         cache = np.zeros(cache_shape, dtype=np.float32)
         with torch.no_grad():
             for images, indexes in tqdm(subset_dl, ncols=100):
+
                 images = images.to(args.device)
+
                 features = model(images)
 
                 cache[indexes.numpy()] = features.cpu().numpy()
