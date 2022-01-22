@@ -62,16 +62,6 @@ aug_transformations = {
     "n": None
     }
 
-
-"""
-aug_transform = transforms.Compose([
-    transforms.RandomCrop(128),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
-])
-"""
-
 def path_to_pil_img(path):
     return Image.open(path).convert("RGB")
 
@@ -112,6 +102,10 @@ class BaseDataset(data.Dataset):
         self.dataset_folder = join(
             datasets_folder, dataset_name, "images", split)
         self.split = split
+
+        if args.data_aug == "R-D":
+            size = (args.res[0], args.res[1])
+            aug_transformations["R-D"] = transforms.Resize(size=size)
         
         data_transform = aug_transformations[args.data_aug]
         self.aug_transform = transforms.Compose([
