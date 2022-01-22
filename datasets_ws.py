@@ -155,10 +155,7 @@ class BaseDataset(data.Dataset):
 
     def __getitem__(self, index):
         img = path_to_pil_img(self.images_paths[index])
-        if self.data_aug:
-            img = self.aug_transform(img)
-        else:
-            img = base_transform(img)
+        img = base_transform(img)
         return img, index
 
     def __len__(self):
@@ -296,6 +293,9 @@ class TripletsDataset(BaseDataset):
             for images, indexes in tqdm(subset_dl, ncols=100):
 
                 images = images.to(args.device)
+
+                if args.data_aug != "n":
+                    img = aug_transformations[args.data_aug](img)
 
                 features = model(images)
 
