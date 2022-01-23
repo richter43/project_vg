@@ -54,7 +54,7 @@ def parse_arguments():
 
     parser.add_argument("--load_from", type = str, default = "", 
                         help = "Folder (in cloud) of the model to be loaded. Resumes training from checkpoint")
-    parser.add_argument("--use_mega", type = str, default = "y", 
+    parser.add_argument("--use_mega", type = str, default = "n", 
                         help = "Load/store your result into the mega cloud")
     parser.add_argument("--mega_username", type = str, default = "c.blangio@gmail.com", 
                         help = "Username of the owner of the Mega cloud you want to access for loading a model")
