@@ -102,7 +102,10 @@ if __name__ == "__main__":
     logging.info(f"Test set: {test_ds}")
     
     # %% Initialize model
-    model = network.GeoLocalizationNet(args)
+    if args.layer != "solar":
+      model = network.GeoLocalizationNet(args)
+    else:
+      model = network.GeoLocalizationNetSOA(args)
     
     if args.layer == "net":
         model.aggregation.conv.bias = None
