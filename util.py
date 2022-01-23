@@ -80,12 +80,22 @@ def MyFind(m, filename):
     #find the file (maybe not ideal as there doesn't seem to be a tree-like structure for the file system, but at least it works)
     for folder in folders:
         for file in files:
-            curr = files[file] 
+            curr = files[file]
+
+            if isinstance(curr['a'], dict) == False:
+                #this file does not have a name, we can't use it so continue
+                continue
+            
             #we check if this one is the right folder for our depth
             if curr['a']['n'] == folder and curr['p'] == parentid:
                 parentid = curr['h']
                 target = curr
                 break
+    
+    if isinstance(curr['a'], dict) == False:
+        #this file doesn't even have a name, definitely not the one we're looking for
+        return None
+
     if curr['a']['n'] != folders[len(folders)-1]:
       return None
     return (target['h'], target)
