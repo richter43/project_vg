@@ -1,3 +1,9 @@
+# Project VG
+
+An implementation by Francesco Blangiardi (s288265), Can Karacomak (s287864) and Samuel Oreste Abreu (s281568).
+
+Please refer to [USAGE.md](./USAGE.md) for more information.
+
 # Project of Visual Geo-localization
 
 This repository provides a ready-to-use visual geo-localization (VG) pipeline, which you can use to train a model on a given dataset.
