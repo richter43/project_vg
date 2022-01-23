@@ -171,11 +171,6 @@ for epoch_num in range(starting_epoch, args.epochs_num):
                                  pin_memory=(args.device == "cuda"),
                                  drop_last=True)
         
-
-        # if epoch_num < starting_epoch:
-        #     #when True we're just iterating through dataloader, no need to do anything further and/or train model
-        #     continue
-        
         model = model.train()
         
         # images shape: (train_batch_size*12)*3*H*W ; by default train_batch_size=4, H=480, W=640

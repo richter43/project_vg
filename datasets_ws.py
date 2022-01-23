@@ -62,16 +62,6 @@ aug_transformations = {
     "n": None
     }
 
-
-"""
-aug_transform = transforms.Compose([
-    transforms.RandomCrop(128),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
-])
-"""
-
 def path_to_pil_img(path):
     return Image.open(path).convert("RGB")
 
@@ -112,6 +102,10 @@ class BaseDataset(data.Dataset):
         self.dataset_folder = join(
             datasets_folder, dataset_name, "images", split)
         self.split = split
+
+        if args.data_aug == "R-D":
+            size = (args.res[0], args.res[1])
+            aug_transformations["R-D"] = transforms.Resize(size=size)
         
         data_transform = aug_transformations[args.data_aug]
         self.aug_transform = transforms.Compose([
@@ -123,7 +117,7 @@ class BaseDataset(data.Dataset):
 
         # Adding the data augmentation boolean
         self.data_aug = False if args.data_aug == 'n' else True
-        
+
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(
                 f"Folder {self.dataset_folder} does not exist")
@@ -297,7 +291,12 @@ class TripletsDataset(BaseDataset):
         cache = np.zeros(cache_shape, dtype=np.float32)
         with torch.no_grad():
             for images, indexes in tqdm(subset_dl, ncols=100):
+
                 images = images.to(args.device)
+
+                if args.data_aug == "R-D" or args.data_aug == "R-I":
+                    images = aug_transformations[args.data_aug](images)
+
                 features = model(images)
 
                 cache[indexes.numpy()] = features.cpu().numpy()
