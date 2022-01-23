@@ -10,6 +10,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 from torch import nn
 import pickle
+from network import sos_loss
 
 
 import localparser as parser
@@ -170,11 +171,6 @@ for epoch_num in range(starting_epoch, args.epochs_num):
                                  pin_memory=(args.device == "cuda"),
                                  drop_last=True)
         
-
-        # if epoch_num < starting_epoch:
-        #     #when True we're just iterating through dataloader, no need to do anything further and/or train model
-        #     continue
-        
         model = model.train()
         
         # images shape: (train_batch_size*12)*3*H*W ; by default train_batch_size=4, H=480, W=640
@@ -184,16 +180,21 @@ for epoch_num in range(starting_epoch, args.epochs_num):
             features = model(images.to(args.device))
             # This is implicitly casted to a tensor afterwards
             loss_triplet = 0
-
+            loss_sos = 0
             # View
             triplets_local_indexes = torch.transpose(
                 triplets_local_indexes.view(args.train_batch_size, args.negs_num_per_query, 3), 1, 0)
             for triplets in triplets_local_indexes:
                 queries_indexes, positives_indexes, negatives_indexes = triplets.T
+                
                 loss_triplet += criterion_triplet(features[queries_indexes],
                                                   features[positives_indexes],
                                                   features[negatives_indexes])
+                if args.layer == "solar":
+                    loss_sos +=sos_loss(features[queries_indexes], features[positives_indexes], features[negatives_indexes])
             del features
+            if args.layer == "solar":
+              loss_triplet = loss_triplet + args.sos_lambda* torch.pow(loss_sos,0.5)
             loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
 
             # set_to_none=True local optimization does not translate to global time optimization

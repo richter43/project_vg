@@ -87,10 +87,12 @@ def parse_arguments():
     parser.add_argument("--data_aug", type=str, default='n', choices=["n", "RC", "GS", "F-R", "B-GS-R", "H-RP", "CS-HF", "R-I", "R-D", "B-H"], 
                         help='Tells whether to use the data augmentation scheme or not and which one')
     parser.add_argument("--aug_prob", type = float, default = 0.5, help = "Probability to apply augmentation to images during training")
+    parser.add_argument("--res", type=int, nargs="+", default=[360, 480], help="Whenever the data augmentaiton technique is R-D, then, set it to this value")
 
 
     #%% Solar arguments
-
+    parser.add_argument("--sos_lambda", type = int, default= 10, help= "Parameter for sos loss")
+    parser.add_argument("--solar_whiten", type=str, default="n", choices=["n", "linear", "svd_cov", "svd_matrix"], help="Linear transformation equivalent of a whitening matrix (Starts with random values)")
 
     args = parser.parse_args()
     if args.queries_per_epoch % args.cache_refresh_rate != 0:
